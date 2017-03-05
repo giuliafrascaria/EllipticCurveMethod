@@ -5,13 +5,33 @@
 #ifndef ECM_DATASTRUCTURES_H
 #define ECM_DATASTRUCTURES_H
 
-//libreria per interi di grandi dimensioni
+//library for large integer operations
 #include <gmp.h>
 
 struct ECpoint
 {
-    mpz_t x;
-    mpz_t y;
+    //montgomery coordinates [X:Z]
+    mpz_t X;
+    mpz_t Z;
+};
+
+struct problemData
+{
+    mpz_t n;                //large composite number to be factored
+
+    mpz_t stageOneB;        //must be even
+    mpz_t stageTwoB;        //100B1
+    mpz_t D;                //total memory
+};
+
+struct ellipticCurve
+{
+    //not weirstrass form, this is the invertionless algorithm
+    mpz_t sigma;
+    mpz_t u;
+    mpz_t v;
+    mpz_t C;
+
 };
 
 #endif //ECM_DATASTRUCTURES_H

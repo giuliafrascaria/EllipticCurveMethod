@@ -4,7 +4,10 @@
 
 /*
  * definire qui le operazioni di somma sulla curva ellittica, calcolo del coefficiente angolare m,
- * estrazione del gcd eccetera
+ *
+ * doubleh
+ * addh
+ *
  * */
 
 
