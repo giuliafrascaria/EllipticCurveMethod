@@ -7,7 +7,7 @@
  *
  * doubleh
  * addh
- *
+ * elliptic multiplication (Montgomery method)
  * */
 
 
