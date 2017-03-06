@@ -105,5 +105,21 @@ void stageOne(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd)
     //void mpz_nextprime (mpz t rop, const mpz t op)
     //void mpz_gcd (mpz t rop, const mpz t op1, const mpz t op2)
 
+    mpz_t primen;
+    mpz_init(primen);
+    mpz_set_str(primen, "1", 10);
 
+    /*
+     * int mpz_cmp_ui (const mpz t op1, unsigned long int op2) [Macro]
+Compare op1 and op2. Return a positive value if op1 > op2, zero if op1 = op2, or a negative
+value if op1 < op2.
+     * */
+
+    while(mpz_cmp(primen, pd.stageOneB) <= 0)
+    {
+        //perform operations
+        //find largest integer a such that pi^a <= B1
+        //Q = [pi^a]Q
+    }
+    //gcd
 }
