@@ -12,6 +12,7 @@ struct ECpoint
 {
     //montgomery coordinates [X:Z]
     mpz_t X;
+    mpz_t Y;                //used to indicate the point to infinity
     mpz_t Z;
 };
 

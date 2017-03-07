@@ -24,7 +24,8 @@ int main(int argc, char ** argv)
     struct problemData pd;
     mpz_init(pd.n);
         //conversion
-    if(mpz_set_str(pd.n, argv[1], 10) != 0)             //segfault
+    printf("%s\n", argv[1]);
+    if(mpz_set_str(pd.n, (const char *) argv[1], 10) != 0)
     {
         perror("invalid input type");
         return EXIT_FAILURE;
@@ -35,6 +36,10 @@ int main(int argc, char ** argv)
     mpz_init(pd.stageTwoB);
     mpz_init(pd.D);
         //assign values
+
+
+    //loop through the next steps when there is a significant chance that there are no factors with logB digits
+
 
     //choose random EC
         //declaration and init
@@ -49,7 +54,7 @@ int main(int argc, char ** argv)
         //generation
     randomEC(EC, startP, pd);
     //stage one
-
+    stageOne(EC, startP, pd);
     //stage two
 
     return EXIT_SUCCESS;
@@ -117,9 +122,29 @@ value if op1 < op2.
 
     while(mpz_cmp(primen, pd.stageOneB) <= 0)
     {
+
         //perform operations
         //find largest integer a such that pi^a <= B1
-        //Q = [pi^a]Q
+        unsigned long exp = 1;
+        int flag = 1;
+        mpz_t power;
+        mpz_init(power);
+        while(flag)
+        {
+            mpz_pow_ui(power, primen, exp);
+            if(mpz_cmp(power, pd.stageOneB) <= 0)
+            {
+                exp += 1;
+                //looking for a bigger exponent
+            }
+            else
+            {
+                flag = 0;
+                //Q = [pi^a]Q
+
+            }
+        }
+
     }
     //gcd
 }
