@@ -35,4 +35,8 @@ struct ellipticCurve
 
 };
 
+struct ECpoint ECmultiply(struct ECpoint Q, mpz_t p);
+void addh();
+void doubleh();
+
 #endif //ECM_DATASTRUCTURES_H

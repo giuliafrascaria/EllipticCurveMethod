@@ -8,6 +8,7 @@
 #include "dataStructures.h"
 
 
+
 void randomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
 void stageOne(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
 
@@ -122,7 +123,6 @@ value if op1 < op2.
 
     while(mpz_cmp(primen, pd.stageOneB) <= 0)
     {
-
         //perform operations
         //find largest integer a such that pi^a <= B1
         unsigned long exp = 1;
@@ -141,7 +141,7 @@ value if op1 < op2.
             {
                 flag = 0;
                 //Q = [pi^a]Q
-
+                struct ECpoint nQ = ECmultiply(Q, power);
             }
         }
 

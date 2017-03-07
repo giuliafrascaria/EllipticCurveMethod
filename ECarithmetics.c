@@ -48,3 +48,18 @@ void doubleh()
 
 }
 
+void doubleOP()
+{
+
+}
+
+void add()
+{
+
+}
+
+void sub()
+{
+
+}
+
