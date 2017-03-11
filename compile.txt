@@ -1,1 +1,1 @@
-sudo gcc -o ECM dataStructures.h main.c -lgmp
+sudo gcc -o ECM dataStructures.h ECarithmetics.c classicalEC.c main.c -lgmp

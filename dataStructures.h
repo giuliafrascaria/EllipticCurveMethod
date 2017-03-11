@@ -35,6 +35,14 @@ struct ellipticCurve
 
 };
 
+struct weirstrassEC
+{
+    //weirstrass form, this is the invertionless algorithm
+    mpz_t a;
+    mpz_t b;
+
+};
+
 struct ECpoint ECmultiply(struct ECpoint Q, mpz_t p);
 void addh();
 void doubleh();
