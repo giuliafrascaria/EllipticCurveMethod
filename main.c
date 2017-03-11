@@ -247,10 +247,17 @@ value if op1 < op2.
             else
             {
                 flag = 0;
-                //Q = [pi^a]Q
-                struct ECpoint nQ = ECmultiply(Q, power);
             }
         }
+
+
+        int i;
+        for(i = 1; i <= exp; i++)
+        {
+            //Q = [pi]Q
+            //the cycle stops if I find a non invertible denominator in the addition slope
+        }
+
 
         //find next prime
         mpz_nextprime(primen, primen);
