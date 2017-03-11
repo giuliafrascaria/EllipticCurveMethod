@@ -81,7 +81,7 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint Q, mpz_t p, struct problemDa
     }
 }
 
-struct ECpoint add(struct ECpoint P, struct ECpoint Q)
+struct ECpoint add(struct ECpoint P, struct ECpoint Q, struct weirstrassEC EC, struct problemData pd)
 {
     if(mpz_cmp_ui(P.Z, 0) == 0)
     {
@@ -111,6 +111,23 @@ struct ECpoint add(struct ECpoint P, struct ECpoint Q)
             return infinity;
         }
         //calculate m
+        mpz_t squareX, threeSquareX, firstterm, doubley, invertY, m;
+        mpz_init(squareX);
+        mpz_init(threeSquareX);
+        mpz_init(firstterm);
+        mpz_init(doubley);
+        mpz_init(invertY);
+        mpz_init(m);
+
+        mpz_pow_ui(squareX, P.X, 2);
+        mpz_mul_ui(threeSquareX, squareX, 3);
+        mpz_add(firstterm, threeSquareX, EC.a);
+
+        mpz_mul_ui(doubley, P.Y, 2);
+        mpz_invert(invertY, doubley, pd.n);
+
+        mpz_mul(m, firstterm, invertY);
+
     }
     else
     {
