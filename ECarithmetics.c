@@ -4,6 +4,7 @@
 
 #include "dataStructures.h"
 
+struct ECpoint negate(struct ECpoint P);
 /*
  * definire qui le operazioni di somma sulla curva ellittica, calcolo del coefficiente angolare m,
  *
@@ -91,6 +92,7 @@ struct ECpoint add(struct ECpoint P, struct ECpoint Q, struct weirstrassEC EC, s
     {
         return P;
     }
+    mpz_t m;
     if(mpz_cmp(P.X, Q.X) == 0)
     {
         mpz_t sumOfY;
@@ -111,7 +113,7 @@ struct ECpoint add(struct ECpoint P, struct ECpoint Q, struct weirstrassEC EC, s
             return infinity;
         }
         //calculate m
-        mpz_t squareX, threeSquareX, firstterm, doubley, invertY, m;
+        mpz_t squareX, threeSquareX, firstterm, doubley, invertY;
         mpz_init(squareX);
         mpz_init(threeSquareX);
         mpz_init(firstterm);
@@ -127,24 +129,74 @@ struct ECpoint add(struct ECpoint P, struct ECpoint Q, struct weirstrassEC EC, s
         mpz_invert(invertY, doubley, pd.n);
 
         mpz_mul(m, firstterm, invertY);
-
     }
     else
     {
         //calculate m
+        mpz_t firstterm, secondterm, invertsecond;
+        mpz_init(firstterm);
+        mpz_init(secondterm);
+        mpz_init(invertsecond);
+        mpz_init(m);
+
+        mpz_sub(firstterm, Q.Y, P.Y);
+        mpz_sub(secondterm, Q.X, P.X);
+        mpz_invert(invertsecond, secondterm, pd.n);
+        mpz_mul(m, firstterm, invertsecond);
     }
     //calculate x3
+    struct ECpoint PandQ;
+    mpz_init(PandQ.X);
+    mpz_init(PandQ.Y);
+    mpz_init(PandQ.Z);
+
+    mpz_t squarem, partial;
+    mpz_init(squarem);
+    mpz_init(partial);
+
+    mpz_pow_ui(squarem, m, 2);
+    mpz_sub(partial, squarem, P.X);
+    mpz_sub(PandQ.X, partial, Q.X);
+
+    //calculate y3
+    //m(x3 - x1)
+    mpz_t partial2;
+    mpz_init(partial2);
+
+    mpz_sub(partial2, PandQ.X, P.X);
+    mpz_mul(PandQ.Y, m, partial2);
+
+    mpz_set_ui(PandQ.Z, 1);
+
+    return PandQ;
     //return (x3, y3)
 }
 
-void sub(struct ECpoint P, struct ECpoint Q)
+struct ECpoint sub(struct ECpoint P, struct ECpoint Q, struct weirstrassEC EC, struct problemData pd)
 {
-
+    struct ECpoint Qnegate = negate(Q);
+    return add(P, Qnegate, EC, pd);
 }
 
-struct ECpoint doubleec(struct ECpoint P)
+struct ECpoint doubleec(struct ECpoint P, struct weirstrassEC EC, struct problemData pd)
 {
-    return add(P, P);
+    return add(P, P, EC, pd);
+}
+
+struct ECpoint negate(struct ECpoint P)
+{
+    //return (x -y z)
+    //void mpq_neg (mpq t negated_operand, const mpq t operand)
+    struct ECpoint Pnegate;
+    mpz_init(Pnegate.X);
+    mpz_init(Pnegate.Y);
+    mpz_init(Pnegate.Z);
+
+    mpz_set(Pnegate.X, P.X);
+    mpz_set(Pnegate.Z, P.Z);
+    mpz_neg(Pnegate.Y, P.Y);
+
+    return Pnegate;
 }
 
 void addh()
