@@ -7,10 +7,11 @@
 #include <stdio.h>
 #include "dataStructures.h"
 
+void classicalECM(struct problemData pd);
+void traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd);
 
 
-
-void randomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
+        void randomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
 void stageOne(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
 void randomECtraditional(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd);
 
@@ -39,8 +40,13 @@ int main(int argc, char ** argv)
     mpz_init(pd.stageTwoB);
     mpz_init(pd.D);
         //assign values
+    mpz_set_ui(pd.stageOneB, 1000000000000);
 
 
+    for(int i = 0; i < 100000000; i++)
+    {
+        classicalECM(pd);
+    }
     //loop through the next steps when there is a significant chance that there are no factors with logB digits
 
 
@@ -61,6 +67,7 @@ void classicalECM(struct problemData pd) {
     mpz_init(EC.b);
 
     randomECtraditional(EC, Q, pd);
+    printf("random init terminated\n");
 
     //g calculus
     mpz_t g;
@@ -86,15 +93,19 @@ void classicalECM(struct problemData pd) {
     {
         //find new curve
 
+        printf("bad EC, restarting\n");
         classicalECM(pd);
     }
     else if (mpz_cmp_ui(gcdterm, 1) > 0)
     {
         //return gcdterm as factor
+        printf("found factor with random choice\n");
     }
     else
     {
         //prime power multipliers
+        printf("starting step 1\n");
+        traditionalStageOne(EC, Q, pd);
 
     }
 }
@@ -198,7 +209,7 @@ value if op1 < op2.
             {
                 flag = 0;
                 //Q = [pi^a]Q
-                struct ECpoint nQ = ECmultiply(Q, power);
+                struct ECpoint nQ = ECmultiplyMontgomery(Q, power);
             }
         }
 
@@ -220,14 +231,16 @@ void traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct proble
 
     mpz_t primen;
     mpz_init(primen);
-    mpz_set_str(primen, "1", 10);
+    mpz_set_str(primen, "2", 10);
 
     /*
      * int mpz_cmp_ui (const mpz t op1, unsigned long int op2) [Macro]
 Compare op1 and op2. Return a positive value if op1 > op2, zero if op1 = op2, or a negative
 value if op1 < op2.
      * */
+    printf("i'm here\n\n");
 
+    struct ECpoint P = Q;
     while(mpz_cmp(primen, pd.stageOneB) <= 0)
     {
         //perform operations
@@ -236,9 +249,11 @@ value if op1 < op2.
         int flag = 1;
         mpz_t power;
         mpz_init(power);
+        printf("i'm inside the loop 1\n");
         while(flag)
         {
             mpz_pow_ui(power, primen, exp);
+            printf("i'm inside the loop 2\n");
             if(mpz_cmp(power, pd.stageOneB) <= 0)
             {
                 exp += 1;
@@ -247,22 +262,45 @@ value if op1 < op2.
             else
             {
                 flag = 0;
+                printf("the exponent is %lu\n", exp);
             }
         }
 
 
-        int i;
+        unsigned int i;
+
+        struct nonInvertibleD d;
+        mpz_init(d.d);
+        d.flag = 0;
+
+        printf("starting prime power multipliers\n\n");
         for(i = 1; i <= exp; i++)
         {
             //Q = [pi]Q
+
+
+            P = ECmultiplyTraditional(P, primen, EC, pd, d);
+
+            if(d.flag)
+            {
+                mpz_t factor;
+                mpz_init(factor);
+                mpz_gcd(factor, pd.n, d.d);
+                gmp_printf("found factor %Zd\n", factor);
+                break;
+            }
+
             //the cycle stops if I find a non invertible denominator in the addition slope
         }
+        printf("on with another prime\n");
 
 
         //find next prime
         mpz_nextprime(primen, primen);
+        gmp_printf("%Zd\n\n", primen);
 
     }
+    printf("failure with this size of B\n");
 }
 
 void randomECtraditional(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
