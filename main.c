@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "dataStructures.h"
+#include <unistd.h>
 
 void classicalECM(struct problemData pd);
 void traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd);
@@ -13,7 +14,7 @@ void traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct proble
 
         void randomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
 void stageOne(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
-void randomECtraditional(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd);
+void randomECtraditional(struct weirstrassEC * EC, struct ECpoint  *Q, struct problemData pd);
 
 
 int main(int argc, char ** argv)
@@ -40,13 +41,14 @@ int main(int argc, char ** argv)
     mpz_init(pd.stageTwoB);
     mpz_init(pd.D);
         //assign values
-    mpz_set_ui(pd.stageOneB, 1000000000000);
+    mpz_set_ui(pd.stageOneB, 10000);
+
+    sleep(1);
 
 
-    for(int i = 0; i < 100000000; i++)
-    {
-        classicalECM(pd);
-    }
+    classicalECM(pd);
+    printf("failure, possibly increment B\n\n");
+
     //loop through the next steps when there is a significant chance that there are no factors with logB digits
 
 
@@ -62,12 +64,26 @@ void classicalECM(struct problemData pd) {
 
     mpz_init(Q.X);
     mpz_init(Q.Y);
+    mpz_init(Q.Z);
+
+    mpz_set_ui(Q.Z, 1);
 
     mpz_init(EC.a);
     mpz_init(EC.b);
 
-    randomECtraditional(EC, Q, pd);
+    randomECtraditional(&EC, &Q, pd);
     printf("random init terminated\n");
+
+    gmp_printf("%Zd\n", Q.X);
+
+    gmp_printf("%Zd\n", Q.Y);
+
+    gmp_printf("%Zd\n", Q.Z);
+
+    gmp_printf("%Zd\n", EC.a);
+
+    sleep(1);
+
 
     //g calculus
     mpz_t g;
@@ -88,23 +104,27 @@ void classicalECM(struct problemData pd) {
 
     mpz_add(gcdterm, term1, term2);
 
+    mpz_gcd(g, gcdterm, pd.n);
 
-    if (mpz_cmp(gcdterm, pd.n) == 0)
+
+    if (mpz_cmp(g, pd.n) == 0)
     {
         //find new curve
 
         printf("bad EC, restarting\n");
         classicalECM(pd);
     }
-    else if (mpz_cmp_ui(gcdterm, 1) > 0)
+    else if (mpz_cmp_ui(g, 1) > 0)
     {
         //return gcdterm as factor
         printf("found factor with random choice\n");
+        gmp_printf("%Zd\n\n", g);
     }
     else
     {
         //prime power multipliers
-        printf("starting step 1\n");
+        printf("starting step 1 in seconds\n");
+        sleep(2);
         traditionalStageOne(EC, Q, pd);
 
     }
@@ -240,7 +260,19 @@ value if op1 < op2.
      * */
     printf("i'm here\n\n");
 
-    struct ECpoint P = Q;
+    struct ECpoint P;
+
+    mpz_init(P.X);
+    mpz_init(P.Y);
+    mpz_init(P.Z);
+
+    mpz_set(P.X, Q.X);
+    mpz_set(P.Y, Q.Y);
+    mpz_set(P.Z, Q.Z);
+
+
+    gmp_printf("x = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
+    sleep(3);
     while(mpz_cmp(primen, pd.stageOneB) <= 0)
     {
         //perform operations
@@ -278,8 +310,8 @@ value if op1 < op2.
         {
             //Q = [pi]Q
 
-
-            P = ECmultiplyTraditional(P, primen, EC, pd, d);
+            gmp_printf("moltiplico per il primo %Zd\n", primen);
+            P = ECmultiplyTraditional(&P, primen, EC, pd, d);
 
             if(d.flag)
             {
@@ -303,7 +335,7 @@ value if op1 < op2.
     printf("failure with this size of B\n");
 }
 
-void randomECtraditional(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
+void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct problemData pd)
 {
     //random sigma, derive u v anc C from this
 
@@ -313,25 +345,29 @@ void randomECtraditional(struct weirstrassEC EC, struct ECpoint Q, struct proble
 
     //generate random x, y, a in [0, n-1]
 
-    mpz_urandomm(Q.X, state, pd.n);
-    mpz_urandomm(Q.Y, state, pd.n);
-    mpz_urandomm(EC.a, state, pd.n);
+    mpz_urandomm(Q->X, state, pd.n);
+    gmp_printf("%Zd\n", Q->X);
+    mpz_urandomm(Q->Y, state, pd.n);
+    gmp_printf("%Zd\n", Q->Y);
+    mpz_urandomm(EC->a, state, pd.n);
+    gmp_printf("%Zd\n", EC->a);
     //the curve is determined by these values
 
-
+    sleep(2);
     mpz_t squareY, cubeX, aX;
     mpz_init(squareY);
     mpz_init(cubeX);
     mpz_init(aX);
-    mpz_pow_ui(squareY, Q.Y, 2);
-    mpz_pow_ui(cubeX, Q.X, 3);
-    mpz_mul(aX, Q.X, EC.a);
+    mpz_pow_ui(squareY, Q->Y, 2);
+    mpz_pow_ui(cubeX, Q->X, 3);
+    mpz_mul(aX, Q->X, EC->a);
 
 
     mpz_t temp;
     mpz_init(temp);
     mpz_sub(temp, squareY, cubeX);
-    mpz_sub(EC.b, temp, aX);
-    mpz_mod(EC.b, EC.b, pd.n);
+    mpz_sub(EC->b, temp, aX);
+    mpz_mod(EC->b, EC->b, pd.n);
+    gmp_printf("%Zd\n", EC->b);
 
 }
