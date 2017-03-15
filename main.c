@@ -8,8 +8,8 @@
 #include "dataStructures.h"
 #include <unistd.h>
 
-void classicalECM(struct problemData pd);
-void traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd);
+void classicalECM(struct problemData pd, mpz_t factor);
+void traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, mpz_t factor);
 
 
         void randomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
@@ -41,13 +41,26 @@ int main(int argc, char ** argv)
     mpz_init(pd.stageTwoB);
     mpz_init(pd.D);
         //assign values
-    mpz_set_ui(pd.stageOneB, 10000);
-
-    sleep(1);
+    mpz_set_ui(pd.stageOneB, 1000);
 
 
-    classicalECM(pd);
-    printf("failure, possibly increment B\n\n");
+    mpz_sqrt(pd.stageTwoB, pd.n);
+
+
+
+    //sleep(1);
+
+    mpz_t factor;
+    mpz_init(factor);
+
+    while(mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0)
+    {
+        classicalECM(pd, factor);
+        printf("failure, possibly increment B\n\n");
+        mpz_mul_ui(pd.stageOneB, pd.stageOneB, 10);
+        sleep(3);
+    }
+    printf("the size of B1 exceeded max B");
 
     //loop through the next steps when there is a significant chance that there are no factors with logB digits
 
@@ -58,7 +71,7 @@ int main(int argc, char ** argv)
     return EXIT_SUCCESS;
 }
 
-void classicalECM(struct problemData pd) {
+void classicalECM(struct problemData pd, mpz_t factor) {
     struct ECpoint Q;
     struct weirstrassEC EC;
 
@@ -82,7 +95,7 @@ void classicalECM(struct problemData pd) {
 
     gmp_printf("%Zd\n", EC.a);
 
-    sleep(1);
+    //sleep(1);
 
 
     //g calculus
@@ -112,7 +125,7 @@ void classicalECM(struct problemData pd) {
         //find new curve
 
         printf("bad EC, restarting\n");
-        classicalECM(pd);
+        classicalECM(pd, factor);
     }
     else if (mpz_cmp_ui(g, 1) > 0)
     {
@@ -124,8 +137,8 @@ void classicalECM(struct problemData pd) {
     {
         //prime power multipliers
         printf("starting step 1 in seconds\n");
-        sleep(2);
-        traditionalStageOne(EC, Q, pd);
+        //sleep(2);
+        traditionalStageOne(EC, Q, pd, factor);
 
     }
 }
@@ -240,7 +253,7 @@ value if op1 < op2.
     //gcd
 }
 
-void traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
+void traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, mpz_t  factor)
 {
     //for cycle between all primes <= B1
     //      pi(B) is the number of primes less than B
@@ -272,7 +285,7 @@ value if op1 < op2.
 
 
     gmp_printf("x = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
-    sleep(3);
+    //sleep(3);
     while(mpz_cmp(primen, pd.stageOneB) <= 0)
     {
         //perform operations
@@ -311,15 +324,16 @@ value if op1 < op2.
             //Q = [pi]Q
 
             gmp_printf("moltiplico per il primo %Zd\n", primen);
-            P = ECmultiplyTraditional(&P, primen, EC, pd, d);
+            P = ECmultiplyTraditional(&P, primen, EC, pd, &d);
 
             if(d.flag)
             {
-                mpz_t factor;
-                mpz_init(factor);
-                mpz_gcd(factor, pd.n, d.d);
-                gmp_printf("found factor %Zd\n", factor);
-                break;
+                mpz_t newFactor;
+                mpz_init(newFactor);
+                mpz_gcd(newFactor, pd.n, d.d);
+                gmp_printf("found factor %Zd\n", newFactor);
+                factor = newFactor;
+                return;
             }
 
             //the cycle stops if I find a non invertible denominator in the addition slope
@@ -353,7 +367,7 @@ void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct pr
     gmp_printf("%Zd\n", EC->a);
     //the curve is determined by these values
 
-    sleep(2);
+    //sleep(2);
     mpz_t squareY, cubeX, aX;
     mpz_init(squareY);
     mpz_init(cubeX);
