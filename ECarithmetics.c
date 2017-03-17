@@ -18,6 +18,7 @@ struct ECpoint * sub(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC E
  * elliptic multiplication (Montgomery method)
  * */
 
+/*
 struct ECpoint ECmultiplyMontgomery(struct ECpoint Q, mpz_t p)
 {
     //initialization
@@ -47,6 +48,7 @@ struct ECpoint ECmultiplyMontgomery(struct ECpoint Q, mpz_t p)
     //final calculation
 
 }
+*/
 
 struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d)
 {
@@ -182,7 +184,7 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
             return infinity;
         }
         //calculate m
-        printf("calculating m\n");
+        //printf("calculating m\n");
         mpz_t squareX, threeSquareX, firstterm, doubley, invertY;
         mpz_init(squareX);
         mpz_init(threeSquareX);
@@ -213,7 +215,7 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
     else
     {
         //calculate m
-        printf("calculating m 1\n");
+        //printf("calculating m 1\n");
         mpz_t firstterm, secondterm, invertsecond;
         mpz_init(firstterm);
         mpz_init(secondterm);
@@ -235,7 +237,7 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
         }
         mpz_mul(m, firstterm, invertsecond);
     }
-    printf("calculating x3\n");
+    //printf("calculating x3\n");
     //calculate x3
     struct ECpoint * PandQ = malloc(sizeof(struct ECpoint));
     mpz_init(PandQ->X);
@@ -254,7 +256,7 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
 
     //calculate y3
     //m(x3 - x1)
-    printf("calculating y3\n");
+    //printf("calculating y3\n");
     mpz_t partial2;
     mpz_init(partial2);
 

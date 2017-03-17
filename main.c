@@ -8,13 +8,14 @@
 #include "dataStructures.h"
 #include <unistd.h>
 
-void classicalECM(struct problemData pd, mpz_t factor);
-void traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, mpz_t factor);
+int classicalECM(struct problemData pd, mpz_t * factor, gmp_randstate_t state);
+int traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, mpz_t  *factor, struct ECpoint * returnQ);
+int stageTwo(struct weirstrassEC EC, struct ECpoint *Q, struct problemData pd);
 
 
-        void randomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
-void stageOne(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
-void randomECtraditional(struct weirstrassEC * EC, struct ECpoint  *Q, struct problemData pd);
+//void randomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
+//void stageOne(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
+void randomECtraditional(struct weirstrassEC * EC, struct ECpoint  *Q, struct problemData pd, gmp_randstate_t state);
 
 
 int main(int argc, char ** argv)
@@ -41,39 +42,46 @@ int main(int argc, char ** argv)
     mpz_init(pd.stageTwoB);
     mpz_init(pd.D);
         //assign values
-    mpz_set_ui(pd.stageOneB, 1000);
+    mpz_set_ui(pd.stageOneB, 100);
 
 
     mpz_sqrt(pd.stageTwoB, pd.n);
 
 
+    //initialize random state
+    gmp_randstate_t state;
+    gmp_randinit_mt(state);
 
     //sleep(1);
 
     mpz_t factor;
     mpz_init(factor);
+    int success = 0;
 
     while(mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0)
     {
-        classicalECM(pd, factor);
-        printf("failure, possibly increment B\n\n");
-        mpz_mul_ui(pd.stageOneB, pd.stageOneB, 10);
-        sleep(3);
+
+        success = classicalECM(pd, &factor, state);
+        if(success)
+        {
+            exit(EXIT_SUCCESS);
+        }
+        printf("failure, try again and eventually increment B\n\n");
+        mpz_mul_ui(pd.stageOneB, pd.stageOneB, 100);
+        sleep(2);
     }
     printf("the size of B1 exceeded max B");
 
+
     //loop through the next steps when there is a significant chance that there are no factors with logB digits
 
-
-
-
-
-    return EXIT_SUCCESS;
+    exit(EXIT_FAILURE);
 }
 
-void classicalECM(struct problemData pd, mpz_t factor) {
+int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state) {
     struct ECpoint Q;
     struct weirstrassEC EC;
+    int success = 0;
 
     mpz_init(Q.X);
     mpz_init(Q.Y);
@@ -84,8 +92,8 @@ void classicalECM(struct problemData pd, mpz_t factor) {
     mpz_init(EC.a);
     mpz_init(EC.b);
 
-    randomECtraditional(&EC, &Q, pd);
-    printf("random init terminated\n");
+    randomECtraditional(&EC, &Q, pd, state);
+    /*printf("random init terminated\n");
 
     gmp_printf("%Zd\n", Q.X);
 
@@ -93,7 +101,7 @@ void classicalECM(struct problemData pd, mpz_t factor) {
 
     gmp_printf("%Zd\n", Q.Z);
 
-    gmp_printf("%Zd\n", EC.a);
+    gmp_printf("%Zd\n", EC.a);*/
 
     //sleep(1);
 
@@ -125,25 +133,41 @@ void classicalECM(struct problemData pd, mpz_t factor) {
         //find new curve
 
         printf("bad EC, restarting\n");
-        classicalECM(pd, factor);
+        classicalECM(pd, factor, state);
     }
     else if (mpz_cmp_ui(g, 1) > 0)
     {
         //return gcdterm as factor
         printf("found factor with random choice\n");
         gmp_printf("%Zd\n\n", g);
+        return 1;
     }
     else
     {
         //prime power multipliers
         printf("starting step 1 in seconds\n");
         //sleep(2);
-        traditionalStageOne(EC, Q, pd, factor);
+        struct ECpoint result;
+        mpz_init(result.X);
+        mpz_init(result.Y);
+        mpz_init(result.Z);
+
+        success = traditionalStageOne(EC, Q, pd, factor, &result);
+
+        if(success == 1)
+        {
+            return success;
+        }
+        else
+        {
+            success = stageTwo(EC, &result, pd);
+        }
 
     }
+    return success;
 }
 
-void invertionlessECM(struct problemData pd)
+/*void invertionlessECM(struct problemData pd)
 {
     //choose random EC
     //declaration and init
@@ -216,11 +240,11 @@ void stageOne(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd)
     mpz_init(primen);
     mpz_set_str(primen, "1", 10);
 
-    /*
+    *//*
      * int mpz_cmp_ui (const mpz t op1, unsigned long int op2) [Macro]
 Compare op1 and op2. Return a positive value if op1 > op2, zero if op1 = op2, or a negative
 value if op1 < op2.
-     * */
+     * *//*
 
     while(mpz_cmp(primen, pd.stageOneB) <= 0)
     {
@@ -251,9 +275,9 @@ value if op1 < op2.
 
     }
     //gcd
-}
+}*/
 
-void traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, mpz_t  factor)
+int traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, mpz_t * factor, struct ECpoint * returnQ)
 {
     //for cycle between all primes <= B1
     //      pi(B) is the number of primes less than B
@@ -271,7 +295,7 @@ void traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct proble
 Compare op1 and op2. Return a positive value if op1 > op2, zero if op1 = op2, or a negative
 value if op1 < op2.
      * */
-    printf("i'm here\n\n");
+
 
     struct ECpoint P;
 
@@ -282,9 +306,9 @@ value if op1 < op2.
     mpz_set(P.X, Q.X);
     mpz_set(P.Y, Q.Y);
     mpz_set(P.Z, Q.Z);
-
-
-    gmp_printf("x = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
+//
+//
+//    gmp_printf("x = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
     //sleep(3);
     while(mpz_cmp(primen, pd.stageOneB) <= 0)
     {
@@ -294,11 +318,11 @@ value if op1 < op2.
         int flag = 1;
         mpz_t power;
         mpz_init(power);
-        printf("i'm inside the loop 1\n");
+        //printf("i'm inside the loop 1\n");
         while(flag)
         {
             mpz_pow_ui(power, primen, exp);
-            printf("i'm inside the loop 2\n");
+            //printf("i'm inside the loop 2\n");
             if(mpz_cmp(power, pd.stageOneB) <= 0)
             {
                 exp += 1;
@@ -307,7 +331,7 @@ value if op1 < op2.
             else
             {
                 flag = 0;
-                printf("the exponent is %lu\n", exp);
+                //printf("the exponent is %lu\n", exp);
             }
         }
 
@@ -318,12 +342,12 @@ value if op1 < op2.
         mpz_init(d.d);
         d.flag = 0;
 
-        printf("starting prime power multipliers\n\n");
+       // printf("starting prime power multipliers\n\n");
         for(i = 1; i <= exp; i++)
         {
             //Q = [pi]Q
 
-            gmp_printf("moltiplico per il primo %Zd\n", primen);
+            //gmp_printf("moltiplico per il primo %Zd\n", primen);
             P = ECmultiplyTraditional(&P, primen, EC, pd, &d);
 
             if(d.flag)
@@ -332,39 +356,106 @@ value if op1 < op2.
                 mpz_init(newFactor);
                 mpz_gcd(newFactor, pd.n, d.d);
                 gmp_printf("found factor %Zd\n", newFactor);
-                factor = newFactor;
-                return;
+
+                mpz_set(*factor, newFactor);
+
+                return 1;
             }
 
             //the cycle stops if I find a non invertible denominator in the addition slope
         }
-        printf("on with another prime\n");
+        //printf("on with another prime\n");
 
 
         //find next prime
         mpz_nextprime(primen, primen);
-        gmp_printf("%Zd\n\n", primen);
+        //gmp_printf("%Zd\n\n", primen);
 
     }
-    printf("failure with this size of B\n");
+    printf("the cycle failed\n");
+    mpz_set(returnQ->X, P.X);
+    mpz_set(returnQ->Y, P.Y);
+    mpz_set(returnQ->Z, P.Z);
+
+    return 0;
+
 }
 
-void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct problemData pd)
+int stageTwo(struct weirstrassEC EC, struct ECpoint *Q, struct problemData pd)
+{
+    //succede se per nessun fattore primo p di n la curva E( ZZp) ha ordine B-smooth.
+    // si dovrebbero individuare fattori primi p di n per cui l’ordine della stessa
+    //curva E su ZZp sia della forma
+    //#E( ZZp) = q · m,
+
+    //la fase 2 ha successo se esiste un p divisore di n per cui ordine della curva ellittica è Bsmooth = m*q
+    //q è un primo in un intervallo B1 B2 con B2 uguale a circa 100 B1
+
+    //precalcolo: lista dei primi tra B1 e B2, differenze tra adiacenti
+
+    //dalla fase uno so che KP = Q
+    //Ri = di*Q
+    //Q1 = q1*Q
+    //Q2 = Q1 + R1 = (q1 + d1)Q = q2*Q ecc
+
+    //se tutti questi sono al finito ha fallito anche la fase 2
+    //altrimenti esiste qi*kP che va a infinito -> ordine di E Zp divide qi*k e il denominatore non invertibile è un fattore non banale di n
+
+    mpz_t q;
+    mpz_t nextq;
+    mpz_init(q);
+    mpz_init(nextq);
+
+    mpz_t B2;
+    mpz_init(B2);
+    mpz_mul_ui(B2, pd.stageOneB, 100);
+
+    struct ECpoint Qi;
+    mpz_init(Qi.X);
+    mpz_init(Qi.Y);
+    mpz_init(Qi.Z);
+
+    struct nonInvertibleD d;
+    mpz_init(d.d);
+    d.flag = 0;
+
+    mpz_nextprime(q, pd.stageOneB);
+    while(mpz_cmp(q, B2) <= 0)
+    {
+        Qi = ECmultiplyTraditional(Q, q, EC, pd, &d);
+        if(d.flag == 1)
+        {
+            //denominatore non invertibile, found factor
+            mpz_t newFactor;
+            mpz_init(newFactor);
+            mpz_gcd(newFactor, pd.n, d.d);
+            gmp_printf("found factor during stage two %Zd\n", newFactor);
+
+        }
+        else
+        {
+            mpz_nextprime(q, q);
+        }
+    }
+    return 0;   //failure
+
+}
+
+void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct problemData pd, gmp_randstate_t state)
 {
     //random sigma, derive u v anc C from this
 
-    //initialize random state
-    gmp_randstate_t state;
-    gmp_randinit_mt(state);
+    //void gmp_randseed (gmp randstate t state, const mpz t seed)
+
 
     //generate random x, y, a in [0, n-1]
 
     mpz_urandomm(Q->X, state, pd.n);
-    gmp_printf("%Zd\n", Q->X);
+    //gmp_printf("%Zd\n", Q->X);
     mpz_urandomm(Q->Y, state, pd.n);
-    gmp_printf("%Zd\n", Q->Y);
+    //gmp_printf("%Zd\n", Q->Y);
     mpz_urandomm(EC->a, state, pd.n);
-    gmp_printf("%Zd\n", EC->a);
+    //gmp_printf("%Zd\n", EC->a);
     //the curve is determined by these values
 
     //sleep(2);
@@ -382,6 +473,6 @@ void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct pr
     mpz_sub(temp, squareY, cubeX);
     mpz_sub(EC->b, temp, aX);
     mpz_mod(EC->b, EC->b, pd.n);
-    gmp_printf("%Zd\n", EC->b);
+    //gmp_printf("%Zd\n", EC->b);
 
 }
