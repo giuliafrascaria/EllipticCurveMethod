@@ -267,6 +267,8 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
 
     mpz_set_ui(PandQ->Z, 1);
 
+    free(P);
+
     return PandQ;
     //return (x3, y3)
 }

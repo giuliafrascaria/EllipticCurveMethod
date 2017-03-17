@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "dataStructures.h"
 #include <unistd.h>
+#include <math.h>
 
 int classicalECM(struct problemData pd, mpz_t * factor, gmp_randstate_t state);
 int traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, mpz_t  *factor, struct ECpoint * returnQ);
@@ -57,15 +58,25 @@ int main(int argc, char ** argv)
     mpz_t factor;
     mpz_init(factor);
     int success = 0;
+    int primeLog = 3;   //starting to find primes with 3 digits
+    int i;
+
+    //get BBEst
 
     while(mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0)
     {
-
-        success = classicalECM(pd, &factor, state);
-        if(success)
+        for(i = 0; i < primeLog; i++)       //repeat w^w times
         {
-            exit(EXIT_SUCCESS);
+            success = classicalECM(pd, &factor, state);
+            if(success)
+            {
+                exit(EXIT_SUCCESS);
+            }
         }
+
+        primeLog++;
+        //get new BBest
+
         printf("failure, try again and eventually increment B\n\n");
         mpz_mul_ui(pd.stageOneB, pd.stageOneB, 100);
         sleep(2);
@@ -76,6 +87,12 @@ int main(int argc, char ** argv)
     //loop through the next steps when there is a significant chance that there are no factors with logB digits
 
     exit(EXIT_FAILURE);
+}
+
+void getBBest(int logp, mpz_t * B)
+{
+    double w0;
+
 }
 
 int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state) {
@@ -160,7 +177,12 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state) {
         }
         else
         {
+            printf("trying stage 2\n");
             success = stageTwo(EC, &result, pd);
+            if(success)
+            {
+                printf("successful stage two\n");
+            }
         }
 
     }
@@ -362,6 +384,8 @@ value if op1 < op2.
                 return 1;
             }
 
+
+
             //the cycle stops if I find a non invertible denominator in the addition slope
         }
         //printf("on with another prime\n");
@@ -376,6 +400,8 @@ value if op1 < op2.
     mpz_set(returnQ->X, P.X);
     mpz_set(returnQ->Y, P.Y);
     mpz_set(returnQ->Z, P.Z);
+
+
 
     return 0;
 
@@ -430,6 +456,8 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint *Q, struct problemData pd)
             mpz_init(newFactor);
             mpz_gcd(newFactor, pd.n, d.d);
             gmp_printf("found factor during stage two %Zd\n", newFactor);
+
+            return 1;
 
         }
         else
