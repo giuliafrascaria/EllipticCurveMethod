@@ -6,10 +6,11 @@
 #include "dataStructures.h"
 #include <unistd.h>
 #include <stdlib.h>
+//#include <gc/gc.h>
 
 
-struct ECpoint * add(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d);
-struct ECpoint * sub(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d);
+struct ECpoint * add(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);
+struct ECpoint * sub(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);
 /*
  * definire qui le operazioni di somma sulla curva ellittica, calcolo del coefficiente angolare m,
  *
@@ -50,7 +51,7 @@ struct ECpoint ECmultiplyMontgomery(struct ECpoint Q, mpz_t p)
 }
 */
 
-struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d)
+struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res)
 {
     //initialize
     //printf("initializing ladder\n");
@@ -94,14 +95,18 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
 
         mp_bitcnt_t j = (mp_bitcnt_t) size-2;
 
-        struct ECpoint * P = malloc(sizeof(struct ECpoint));
+        /*struct ECpoint * P = malloc(sizeof(struct ECpoint));
         mpz_init(P->X);
         mpz_init(P->Y);
         mpz_init(P->Z);
 
         mpz_set(P->X, Q->X);
         mpz_set(P->Y, Q->Y);
-        mpz_set(P->Z, Q->Z);
+        mpz_set(P->Z, Q->Z);*/
+
+        mpz_set(res->X, Q->X);
+        mpz_set(res->Y, Q->Y);
+        mpz_set(res->Z, Q->Z);
 
         /*void mpz_realloc2 (mpz t x, mp bitcnt t n) [Function]
 Change the space allocated for x to n bits. The value in x is preserved if it fits, or is set to
@@ -110,7 +115,7 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
         while(j >= 1 && (d->flag == 0))
         {
             //printf("doubling P\n");
-            P = doubleec(P, EC, pd, d);
+            res = doubleec(res, EC, pd, d, res);
             int mj, nj;
             mj = mpz_tstbit(m, j);
             nj = mpz_tstbit(n, j);
@@ -120,12 +125,12 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
             if((mj == 1) && (nj == 0))
             {
                 //printf("Adding P and Q\n");
-                P = add(P, Q, EC, pd, d);
+                res = add(res, Q, EC, pd, d, res);
             }
             if((mj == 0) && (nj == 1))
             {
                 //printf("subtracting p and q\n");
-                P = sub(P, Q, EC, pd, d);
+                res = sub(res, Q, EC, pd, d, res);
             }
             //bitwise operation
                 //int mpz_tstbit (const mpz t op, mp bitcnt t bit_index) [Function]
@@ -135,11 +140,11 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
             //if(mpz_tstbit())
             j = j-1;
         }
-        return *P;
+        return *res;
     }
 }
 
-struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d)
+struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint *res)
 {
 
     if(mpz_cmp_ui(P->Z, 0) == 0)
@@ -172,7 +177,7 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
         {
             //infinity
             printf("point to infinity\n");
-            struct ECpoint * infinity = malloc(sizeof(struct ECpoint));
+            /*struct ECpoint * infinity = malloc(sizeof(struct ECpoint));
             mpz_init(infinity->X);
             mpz_init(infinity->Y);
             mpz_init(infinity->Z);
@@ -181,8 +186,15 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
             mpz_set_ui(infinity->Y, 1);
             mpz_set_ui(infinity->Z, 0);
 
-            return infinity;
+            return infinity;*/
+            mpz_set_ui(res->X, 0);
+            mpz_set_ui(res->Y, 1);
+            mpz_set_ui(res->Z, 0);
+
+            return res;
         }
+
+        mpz_clear(sumOfY);
         //calculate m
         //printf("calculating m\n");
         mpz_t squareX, threeSquareX, firstterm, doubley, invertY;
@@ -211,6 +223,12 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
         }
 
         mpz_mul(m, firstterm, invertY);
+
+        mpz_clear(firstterm);
+        mpz_clear(invertY);
+        mpz_clear(doubley);
+        mpz_clear(threeSquareX);
+        mpz_clear(squareX);
     }
     else
     {
@@ -232,17 +250,23 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
             printf("noninvertible den 1\n");
             d->flag = 1;
             mpz_set(d->d, secondterm);
+
             //I should break the cycle
             return P;
         }
         mpz_mul(m, firstterm, invertsecond);
+        mpz_clear(firstterm);
+        mpz_clear(invertsecond);
+        mpz_clear(secondterm);
     }
     //printf("calculating x3\n");
     //calculate x3
-    struct ECpoint * PandQ = malloc(sizeof(struct ECpoint));
-    mpz_init(PandQ->X);
-    mpz_init(PandQ->Y);
-    mpz_init(PandQ->Z);
+    mp_bitcnt_t size = mpz_size(pd.n);
+    //mpz_realloc2(PandQ->Y, size);
+    struct ECpoint * PandQ = malloc(sizeof(struct ECpoint));        //unica malloc che rimane, unica malloc che riempie
+    mpz_init2(PandQ->X, size);
+    mpz_init2(PandQ->Y, size);
+    mpz_init2(PandQ->Z, size);
 
     mpz_t squarem, partial;
     mpz_init(squarem);
@@ -252,7 +276,12 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
     mpz_sub(partial, squarem, P->X);
     mpz_sub(PandQ->X, partial, Q->X);
 
+    mpz_clear(partial);
+    mpz_clear(squarem);
+
     mpz_mod(PandQ->X, PandQ->X, pd.n);
+
+
 
     //calculate y3
     //m(x3 - x1)
@@ -263,41 +292,52 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
     mpz_sub(partial2, PandQ->X, P->X);
     mpz_mul(PandQ->Y, m, partial2);
 
+    mpz_clear(partial2);
+    mpz_clear(m);
+
     mpz_mod(PandQ->Y, PandQ->Y, pd.n);
+
+    /*mp_bitcnt_t size = mpz_size(pd.n);
+    mpz_realloc2(PandQ->Y, size);*/
 
     mpz_set_ui(PandQ->Z, 1);
 
-    free(P);
+    //free(P);
 
     return PandQ;
     //return (x3, y3)
 }
 
-struct ECpoint * sub(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d)
+struct ECpoint * sub(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res)
 {
     struct ECpoint Qnegate = negate(Q);
-    return add(P, &Qnegate, EC, pd, d);
+    return add(P, &Qnegate, EC, pd, d, res);
+
 }
 
-struct ECpoint * doubleec(struct ECpoint * P, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD *d)
+struct ECpoint * doubleec(struct ECpoint * P, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD *d, struct ECpoint *res)
 {
-    return add(P, P, EC, pd, d);
+    return add(P, P, EC, pd, d, res);
 }
 
 struct ECpoint negate(struct ECpoint *P)
 {
     //return (x -y z)
     //void mpq_neg (mpq t negated_operand, const mpq t operand)
-    struct ECpoint Pnegate;
+    /*struct ECpoint Pnegate;
     mpz_init(Pnegate.X);
     mpz_init(Pnegate.Y);
-    mpz_init(Pnegate.Z);
+    mpz_init(Pnegate.Z);*/
 
-    mpz_set(Pnegate.X, P->X);
+    /*mpz_set(Pnegate.X, P->X);
     mpz_set(Pnegate.Z, P->Z);
-    mpz_neg(Pnegate.Y, P->Y);
+    mpz_neg(Pnegate.Y, P->Y);*/
 
-    return Pnegate;
+    
+    mpz_neg(P->Y, P->Y);
+
+    //return Pnegate;
+    return *P;
 }
 
 

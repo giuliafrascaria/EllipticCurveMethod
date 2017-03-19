@@ -11,7 +11,8 @@
 
 int classicalECM(struct problemData pd, mpz_t * factor, gmp_randstate_t state);
 int traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, mpz_t  *factor, struct ECpoint * returnQ);
-int stageTwo(struct weirstrassEC EC, struct ECpoint *Q, struct problemData pd);
+int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd);
+void getBBest(int logp, mpz_t * B);
 
 
 //void randomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
@@ -47,6 +48,7 @@ int main(int argc, char ** argv)
 
 
     mpz_sqrt(pd.stageTwoB, pd.n);
+    gmp_printf("square root of n = %Zd\n", pd.stageTwoB);
 
 
     //initialize random state
@@ -58,14 +60,40 @@ int main(int argc, char ** argv)
     mpz_t factor;
     mpz_init(factor);
     int success = 0;
-    int primeLog = 3;   //starting to find primes with 3 digits
-    int i;
+    int primeLog = 9;   //starting to find primes with 3 digits (this is natural log)
+    double i, ww, w;
+    long iterations;
 
     //get BBEst
 
-    while(mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0)
+    int maxlog = primeLog+10;
+
+    pid_t pid;
+    pid = fork();
+
+
+    if(pid == 0)
     {
-        for(i = 0; i < primeLog; i++)       //repeat w^w times
+        primeLog = primeLog + 10;
+        maxlog = maxlog + 10;
+    }
+
+
+
+    while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0 && primeLog < maxlog) || pid == 0)
+    {
+        getBBest(primeLog, &pd.stageOneB);
+
+        w = primeLog/log(mpz_get_ui(pd.stageOneB));
+
+        ww = pow(w, w);
+        iterations = lround(ww);
+        printf("process %d looking for factors with approximately %d digits, iterating for %ld times\n", pid, primeLog/3, iterations);
+
+
+
+        gmp_printf("BBest = %Zd\n\n", pd.stageOneB);
+        for(i = 0; i < iterations; i++)       //repeat w^w times
         {
             success = classicalECM(pd, &factor, state);
             if(success)
@@ -74,14 +102,14 @@ int main(int argc, char ** argv)
             }
         }
 
-        primeLog++;
+        primeLog+=3;
         //get new BBest
 
-        printf("failure, try again and eventually increment B\n\n");
-        mpz_mul_ui(pd.stageOneB, pd.stageOneB, 100);
-        sleep(2);
+        //printf("failure, try again and eventually increment B\n\n");
+        //mpz_mul_ui(pd.stageOneB, pd.stageOneB, 100);
+        //sleep(1);
     }
-    printf("the size of B1 exceeded max B");
+    printf("the size of B1 exceeded max B, process %d quitting\n", pid);
 
 
     //loop through the next steps when there is a significant chance that there are no factors with logB digits
@@ -91,7 +119,15 @@ int main(int argc, char ** argv)
 
 void getBBest(int logp, mpz_t * B)
 {
-    double w0;
+    double w0; //sqrt of(2logp/loglogp)
+    double den = log(logp);
+    w0 = sqrt((2*logp)/den);
+
+    double Bbest = pow(M_E, logp/w0);
+
+    long integerBBest = lround(Bbest);
+
+    mpz_set_ui(*B, (unsigned long) integerBBest);
 
 }
 
@@ -162,7 +198,7 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state) {
     else
     {
         //prime power multipliers
-        printf("starting step 1 in seconds\n");
+        //printf("starting step 1 in seconds\n");
         //sleep(2);
         struct ECpoint result;
         mpz_init(result.X);
@@ -177,15 +213,34 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state) {
         }
         else
         {
-            printf("trying stage 2\n");
-            success = stageTwo(EC, &result, pd);
+            //printf("trying stage 2\n");
+            /*success = stageTwo(EC, result, pd);
             if(success)
             {
                 printf("successful stage two\n");
-            }
+            }*/
         }
 
+        mpz_clear(result.X);
+        mpz_clear(result.Y);
+        mpz_clear(result.Z);
+
     }
+    mpz_clear(Q.X);
+    mpz_clear(Q.Y);
+    mpz_clear(Q.Z);
+
+    mpz_clear(EC.b);
+    mpz_clear(EC.a);
+
+    mpz_clear(cubea);
+    mpz_clear(term1);
+    mpz_clear(squareb);
+    mpz_clear(term2);
+    mpz_clear(gcdterm);
+    mpz_clear(g);
+
+
     return success;
 }
 
@@ -356,6 +411,7 @@ value if op1 < op2.
                 //printf("the exponent is %lu\n", exp);
             }
         }
+        mpz_clear(power);
 
 
         unsigned int i;
@@ -370,7 +426,10 @@ value if op1 < op2.
             //Q = [pi]Q
 
             //gmp_printf("moltiplico per il primo %Zd\n", primen);
-            P = ECmultiplyTraditional(&P, primen, EC, pd, &d);
+            P = ECmultiplyTraditional(&P, primen, EC, pd, &d, &P);
+
+            //gmp_printf("px %Zd, py %Zd, pz %Zd\n", P.X, P.Y, P.Z);
+            //sleep(1);
 
             if(d.flag)
             {
@@ -384,10 +443,10 @@ value if op1 < op2.
                 return 1;
             }
 
-
-
             //the cycle stops if I find a non invertible denominator in the addition slope
         }
+
+        mpz_clear(d.d);
         //printf("on with another prime\n");
 
 
@@ -396,18 +455,22 @@ value if op1 < op2.
         //gmp_printf("%Zd\n\n", primen);
 
     }
-    printf("the cycle failed\n");
+    //printf("cycle failed\n");
     mpz_set(returnQ->X, P.X);
     mpz_set(returnQ->Y, P.Y);
     mpz_set(returnQ->Z, P.Z);
 
+    mpz_clear(primen);
 
+    mpz_clear(P.X);
+    mpz_clear(P.Y);
+    mpz_clear(P.Z);
 
     return 0;
 
 }
 
-int stageTwo(struct weirstrassEC EC, struct ECpoint *Q, struct problemData pd)
+int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
 {
     //succede se per nessun fattore primo p di n la curva E( ZZp) ha ordine B-smooth.
     // si dovrebbero individuare fattori primi p di n per cui l’ordine della stessa
@@ -434,21 +497,34 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint *Q, struct problemData pd)
 
     mpz_t B2;
     mpz_init(B2);
-    mpz_mul_ui(B2, pd.stageOneB, 100);
+    mpz_mul_ui(B2, pd.stageOneB, 10);
 
     struct ECpoint Qi;
+
     mpz_init(Qi.X);
     mpz_init(Qi.Y);
     mpz_init(Qi.Z);
+
+    mpz_set(Qi.X, Q.X);
+    mpz_set(Qi.Y, Q.Y);
+    mpz_set(Qi.Z, Q.Z);
 
     struct nonInvertibleD d;
     mpz_init(d.d);
     d.flag = 0;
 
+
+    //gmp_printf("qx %Zd, qy %Zd, qz %Zd\n", Q.X, Q.Y, Q.Z);
+    //sleep(1);
+
     mpz_nextprime(q, pd.stageOneB);
     while(mpz_cmp(q, B2) <= 0)
     {
-        Qi = ECmultiplyTraditional(Q, q, EC, pd, &d);
+        Qi = ECmultiplyTraditional(&Qi, q, EC, pd, &d, &Qi);
+
+        //gmp_printf("x %Zd, y %Zd, z %Zd\n", Qi.X, Qi.Y, Qi.Z);
+        //sleep(1);
+
         if(d.flag == 1)
         {
             //denominatore non invertibile, found factor
@@ -463,8 +539,25 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint *Q, struct problemData pd)
         else
         {
             mpz_nextprime(q, q);
+
+            mpz_set(Qi.X, Q.X);
+            mpz_set(Qi.Y, Q.Y);
+            mpz_set(Qi.Z, Q.Z);
+
+            //gmp_printf("\n\ntrying prime %Zd\n\n", q);
         }
     }
+
+    mpz_clear(Qi.X);
+    mpz_clear(Qi.Y);
+    mpz_clear(Qi.Z);
+
+    mpz_clear(B2);
+    mpz_clear(d.d);
+
+    mpz_clear(q);
+    mpz_clear(nextq);
+
     return 0;   //failure
 
 }
@@ -501,6 +594,14 @@ void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct pr
     mpz_sub(temp, squareY, cubeX);
     mpz_sub(EC->b, temp, aX);
     mpz_mod(EC->b, EC->b, pd.n);
+
+    mp_bitcnt_t size = mpz_size(pd.n);
+    mpz_realloc2(EC->b, size);
+
+    mpz_clear(squareY);
+    mpz_clear(cubeX);
+    mpz_clear(aX);
+    mpz_clear(temp);
     //gmp_printf("%Zd\n", EC->b);
 
 }
