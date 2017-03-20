@@ -51,6 +51,7 @@ struct nonInvertibleD
 
 void addh();
 void doubleh();
+struct ECpoint * add(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);
 struct ECpoint negate(struct ECpoint *P);
 struct ECpoint *doubleec(struct ECpoint *P, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD *d, struct ECpoint * res);
 struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);

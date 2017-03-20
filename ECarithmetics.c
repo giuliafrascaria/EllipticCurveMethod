@@ -6,10 +6,9 @@
 #include "dataStructures.h"
 #include <unistd.h>
 #include <stdlib.h>
-//#include <gc/gc.h>
+#include "gc/include/gc/gc.h"
 
 
-struct ECpoint * add(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);
 struct ECpoint * sub(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);
 /*
  * definire qui le operazioni di somma sulla curva ellittica, calcolo del coefficiente angolare m,
@@ -126,11 +125,15 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
             {
                 //printf("Adding P and Q\n");
                 res = add(res, Q, EC, pd, d, res);
+
+                //free(res);
             }
             if((mj == 0) && (nj == 1))
             {
                 //printf("subtracting p and q\n");
                 res = sub(res, Q, EC, pd, d, res);
+
+                //free(res);
             }
             //bitwise operation
                 //int mpz_tstbit (const mpz t op, mp bitcnt t bit_index) [Function]
@@ -264,6 +267,7 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
     mp_bitcnt_t size = mpz_size(pd.n);
     //mpz_realloc2(PandQ->Y, size);
     struct ECpoint * PandQ = malloc(sizeof(struct ECpoint));        //unica malloc che rimane, unica malloc che riempie
+    //struct ECpoint * PandQ = GC_MALLOC(sizeof(struct ECpoint));
     mpz_init2(PandQ->X, size);
     mpz_init2(PandQ->Y, size);
     mpz_init2(PandQ->Z, size);

@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "dataStructures.h"
+#include "gc/include/gc/gc.h"
 #include <unistd.h>
 #include <math.h>
 
@@ -22,6 +23,7 @@ void randomECtraditional(struct weirstrassEC * EC, struct ECpoint  *Q, struct pr
 
 int main(int argc, char ** argv)
 {
+    //GC_INIT();
     if(argc != 2)
     {
         perror("missing number");
@@ -66,7 +68,7 @@ int main(int argc, char ** argv)
 
     //get BBEst
 
-    int maxlog = primeLog+10;
+   /* int maxlog = primeLog+10;
 
     pid_t pid;
     pid = fork();
@@ -77,10 +79,11 @@ int main(int argc, char ** argv)
         primeLog = primeLog + 10;
         maxlog = maxlog + 10;
     }
+*/
 
 
-
-    while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0 && primeLog < maxlog) || pid == 0)
+    //while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0 && primeLog < maxlog) || pid == 0)
+    while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0))
     {
         getBBest(primeLog, &pd.stageOneB);
 
@@ -88,7 +91,7 @@ int main(int argc, char ** argv)
 
         ww = pow(w, w);
         iterations = lround(ww);
-        printf("process %d looking for factors with approximately %d digits, iterating for %ld times\n", pid, primeLog/3, iterations);
+        //printf("process %d looking for factors with approximately %d digits, iterating for %ld times\n", pid, primeLog/3, iterations);
 
 
 
@@ -109,7 +112,7 @@ int main(int argc, char ** argv)
         //mpz_mul_ui(pd.stageOneB, pd.stageOneB, 100);
         //sleep(1);
     }
-    printf("the size of B1 exceeded max B, process %d quitting\n", pid);
+    //printf("the size of B1 exceeded max B, process %d quitting\n", pid);
 
 
     //loop through the next steps when there is a significant chance that there are no factors with logB digits
@@ -213,12 +216,12 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state) {
         }
         else
         {
-            //printf("trying stage 2\n");
-            /*success = stageTwo(EC, result, pd);
+            printf("trying stage 2\n");
+            success = stageTwo(EC, result, pd);
             if(success)
             {
                 printf("successful stage two\n");
-            }*/
+            }
         }
 
         mpz_clear(result.X);
@@ -492,14 +495,20 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
 
     mpz_t q;
     mpz_t nextq;
+    mpz_t delta;
     mpz_init(q);
     mpz_init(nextq);
+    mpz_init(delta);
 
     mpz_t B2;
     mpz_init(B2);
     mpz_mul_ui(B2, pd.stageOneB, 10);
 
-    struct ECpoint Qi;
+    struct ECpoint Qi, term2;
+
+    struct ECpoint * previousCalc;
+
+    previousCalc = &Qi;
 
     mpz_init(Qi.X);
     mpz_init(Qi.Y);
@@ -509,6 +518,14 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
     mpz_set(Qi.Y, Q.Y);
     mpz_set(Qi.Z, Q.Z);
 
+    mpz_init(term2.X);
+    mpz_init(term2.Y);
+    mpz_init(term2.Z);
+
+    mpz_set(term2.X, Q.X);
+    mpz_set(term2.Y, Q.Y);
+    mpz_set(term2.Z, Q.Z);
+
     struct nonInvertibleD d;
     mpz_init(d.d);
     d.flag = 0;
@@ -517,13 +534,29 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
     //gmp_printf("qx %Zd, qy %Zd, qz %Zd\n", Q.X, Q.Y, Q.Z);
     //sleep(1);
 
+    mpz_nextprime(nextq, pd.stageOneB);
     mpz_nextprime(q, pd.stageOneB);
+
+    *previousCalc = ECmultiplyTraditional(previousCalc, q, EC, pd, &d, previousCalc);
+    //P = ECmultiplyTraditional(&P, primen, EC, pd, &d, &P);
+
+    //gmp_printf("x %Zd, y %Zd, z %Zd\n", Qi.X, Qi.Y, Qi.Z);
+    //sleep(1);
+
+
+
     while(mpz_cmp(q, B2) <= 0)
     {
-        Qi = ECmultiplyTraditional(&Qi, q, EC, pd, &d, &Qi);
 
-        //gmp_printf("x %Zd, y %Zd, z %Zd\n", Qi.X, Qi.Y, Qi.Z);
+        mpz_nextprime(nextq, q);
+        mpz_sub(delta, nextq, q);
+
+        term2 = ECmultiplyTraditional(&term2, delta, EC, pd, &d, &term2);
+
+        previousCalc = add(previousCalc, &term2, EC, pd, &d, previousCalc);
+        //gmp_printf("x %Zd, y %Zd, z %Zd\n", previousCalc->X, previousCalc->Y, previousCalc->Z);
         //sleep(1);
+        //devo tenere in memoria la precedente moltiplicazione e fare quella nuova, moltiplicando Q per deltai = qi+1 - qi
 
         if(d.flag == 1)
         {
@@ -538,13 +571,15 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
         }
         else
         {
-            mpz_nextprime(q, q);
+            mpz_swap(q, nextq);
+
+            /*mpz_nextprime(q, q);
 
             mpz_set(Qi.X, Q.X);
             mpz_set(Qi.Y, Q.Y);
-            mpz_set(Qi.Z, Q.Z);
+            mpz_set(Qi.Z, Q.Z);*/
 
-            //gmp_printf("\n\ntrying prime %Zd\n\n", q);
+            //gmp_printf("\n\ntrying prime %Zd\n\n", nextq);
         }
     }
 
@@ -567,7 +602,6 @@ void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct pr
     //random sigma, derive u v anc C from this
 
     //void gmp_randseed (gmp randstate t state, const mpz t seed)
-
 
     //generate random x, y, a in [0, n-1]
 
