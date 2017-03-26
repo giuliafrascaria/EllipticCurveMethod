@@ -9,16 +9,24 @@
 #include "gc/include/gc/gc.h"
 #include <unistd.h>
 #include <math.h>
+#include <pthread.h>
 
-int classicalECM(struct problemData pd, mpz_t * factor, gmp_randstate_t state);
+int classicalECM(struct problemData pd, mpz_t * factor, gmp_randstate_t state, int k, int digits);
 int traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, mpz_t  *factor, struct ECpoint * returnQ);
 int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd);
 void getBBest(int logp, mpz_t * B);
+void * loop(void * k);
+void optimizedRandomEC(struct weirstrassEC * EC, struct ECpoint * Q, struct problemData pd, gmp_randstate_t state);
 
 
 //void randomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
 //void stageOne(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
 void randomECtraditional(struct weirstrassEC * EC, struct ECpoint  *Q, struct problemData pd, gmp_randstate_t state);
+
+
+struct problemData pd;
+int maxdigits = 9;
+pthread_mutex_t stage2mtx[8];
 
 
 int main(int argc, char ** argv)
@@ -31,7 +39,7 @@ int main(int argc, char ** argv)
     }
     //convert input into internal representation
         //declarations and init
-    struct problemData pd;
+
     mpz_init(pd.n);
         //conversion
     printf("%s\n", argv[1]);
@@ -42,6 +50,12 @@ int main(int argc, char ** argv)
     }
     //choose criteria
         //init
+
+    for(int j = 0; j < 8; j++)
+    {
+        pthread_mutex_init(&stage2mtx[j], NULL);
+    }
+
     mpz_init(pd.stageOneB);
     mpz_init(pd.stageTwoB);
     mpz_init(pd.D);
@@ -53,26 +67,12 @@ int main(int argc, char ** argv)
     gmp_printf("square root of n = %Zd\n", pd.stageTwoB);
 
 
-    //initialize random state
-    gmp_randstate_t state;
-    gmp_randinit_mt(state);
-
-    //sleep(1);
-
-    mpz_t factor;
-    mpz_init(factor);
-    int success = 0;
-    int primeLog = 9;   //starting to find primes with 3 digits (this is natural log)
-    double i, ww, w;
-    long iterations;
-
     //get BBEst
 
-   /* int maxlog = primeLog+10;
+    /*int maxlog = primeLog+10;
 
     pid_t pid;
     pid = fork();
-
 
     if(pid == 0)
     {
@@ -81,6 +81,41 @@ int main(int argc, char ** argv)
     }
 */
 
+    pthread_t t[7];
+    for(int k = 0; k < 7; k++)
+    {
+
+        int c =k;
+        pthread_create(&t[k], NULL, loop, (void *) &c);
+        usleep(100);
+    }
+
+    int seven = 7;
+    loop(&seven);
+}
+
+void * loop(void * k)
+{
+    int * index = (int *) k;
+    int cont = *index;
+    //printf("new thread with mtx %d\n", cont);
+
+    pthread_t tid = pthread_self();
+    //initialize random state
+    gmp_randstate_t state;
+    gmp_randinit_mt(state);
+
+    gmp_randseed_ui(state, tid);
+
+    //sleep(1);
+
+    mpz_t factor;
+    mpz_init(factor);
+    int success = 0;
+    int primeLog = 9;   //starting to find primes with 3 digits (this is natural log)
+    double ww, w;
+    long i;
+    long iterations;
 
     //while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0 && primeLog < maxlog) || pid == 0)
     while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0))
@@ -90,19 +125,20 @@ int main(int argc, char ** argv)
         w = primeLog/log(mpz_get_ui(pd.stageOneB));
 
         ww = pow(w, w);
-        iterations = lround(ww);
-        //printf("process %d looking for factors with approximately %d digits, iterating for %ld times\n", pid, primeLog/3, iterations);
+        iterations = lround(ww/16);
+        //printf("process looking for factors with approximately %d digits, iterating for %ld times\n", primeLog/3, iterations);
 
 
 
-        gmp_printf("BBest = %Zd\n\n", pd.stageOneB);
-        for(i = 0; i < iterations; i++)       //repeat w^w times
+        //gmp_printf("BBest = %Zd\n\n", pd.stageOneB);
+        for(i = 0; i < iterations/8; i++)       //repeat w^w times
         {
-            success = classicalECM(pd, &factor, state);
-            if(success)
+            success = classicalECM(pd, &factor, state, cont, primeLog);
+            if(success == 1)
             {
                 exit(EXIT_SUCCESS);
             }
+            //printf("%ld\n", i);
         }
 
         primeLog+=3;
@@ -113,6 +149,7 @@ int main(int argc, char ** argv)
         //sleep(1);
     }
     //printf("the size of B1 exceeded max B, process %d quitting\n", pid);
+
 
 
     //loop through the next steps when there is a significant chance that there are no factors with logB digits
@@ -134,7 +171,10 @@ void getBBest(int logp, mpz_t * B)
 
 }
 
-int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state) {
+int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, int k, int digits)
+{
+
+
     struct ECpoint Q;
     struct weirstrassEC EC;
     int success = 0;
@@ -148,7 +188,9 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state) {
     mpz_init(EC.a);
     mpz_init(EC.b);
 
-    randomECtraditional(&EC, &Q, pd, state);
+    //randomECtraditional(&EC, &Q, pd, state);
+    optimizedRandomEC(&EC, &Q, pd, state);
+
     /*printf("random init terminated\n");
 
     gmp_printf("%Zd\n", Q.X);
@@ -189,13 +231,13 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state) {
         //find new curve
 
         printf("bad EC, restarting\n");
-        classicalECM(pd, factor, state);
+        classicalECM(pd, factor, state, k, digits);
     }
     else if (mpz_cmp_ui(g, 1) > 0)
     {
         //return gcdterm as factor
-        printf("found factor with random choice\n");
-        gmp_printf("%Zd\n\n", g);
+        printf("-------------------------------------\n\n\tfound factor with random choice\n");
+        gmp_printf("\t\t%Zd\n-------------------------------\n\n", g);
         return 1;
     }
     else
@@ -212,17 +254,53 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state) {
 
         if(success == 1)
         {
+            printf("successful stage 1\n");
             return success;
+        }
+        else if(success == 0)
+        {
+            //printf("should try stage 2\n");
+            //sleep(1);
+
+            if(digits > maxdigits)
+            {
+                //printf("thread %ld trying to lock %d mtxfor %d digits \n", pthread_self(), k, digits);
+
+                if(pthread_mutex_trylock(&(stage2mtx[k])) == 0)
+                {
+                    maxdigits = digits;
+                    success = stageTwo(EC, result, pd);
+                    if(success)
+                    {
+                        printf("successful stage two for %d digits\n", digits/3);
+                    }
+                    printf("thread %ld in stage two for %d digits\n", pthread_self(),digits/3);
+                    //sleep(1);
+
+                    pthread_mutex_unlock(&stage2mtx[k]);
+                    //printf("thread %ld leaving stage two for ln = %d\n", pthread_self(),digits);
+                    return success;
+                }
+            }
+
         }
         else
         {
-            printf("trying stage 2\n");
+            printf("found point to infinity, trying another curve\n");
+            //sleep(1);
+            return 2;
+        }
+        /*else
+        {
+            printf("should try stage 2\n");
+            //sleep(1);
             success = stageTwo(EC, result, pd);
             if(success)
             {
                 printf("successful stage two\n");
             }
-        }
+            return success;
+        }*/
 
         mpz_clear(result.X);
         mpz_clear(result.Y);
@@ -266,7 +344,7 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state) {
     //stage two
 }
 
-void randomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd)
+void optimizedRandomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd)
 {
     //random sigma, derive u v anc C from this
 
@@ -383,12 +461,16 @@ value if op1 < op2.
     mpz_init(P.Y);
     mpz_init(P.Z);
 
+ /*   mpz_init(res.X);
+    mpz_init(res.Y);
+    mpz_init(res.Z);*/
+
     mpz_set(P.X, Q.X);
     mpz_set(P.Y, Q.Y);
     mpz_set(P.Z, Q.Z);
 //
 //
-//    gmp_printf("x = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
+//   gmp_printf("x = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
     //sleep(3);
     while(mpz_cmp(primen, pd.stageOneB) <= 0)
     {
@@ -428,10 +510,24 @@ value if op1 < op2.
         {
             //Q = [pi]Q
 
-            //gmp_printf("moltiplico per il primo %Zd\n", primen);
-            P = ECmultiplyTraditional(&P, primen, EC, pd, &d, &P);
+            /*gmp_printf("moltiplico per il primo %Zd\n", primen);
+            gmp_printf("prep\n\tx = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
+            gmp_printf("pre\n\trx %Zd, ry %Zd, rz %Zd\n", returnQ->X, returnQ->Y, returnQ->Z);*/
 
-            //gmp_printf("px %Zd, py %Zd, pz %Zd\n", P.X, P.Y, P.Z);
+            *returnQ = ECmultiplyTraditional(&P, primen, EC, pd, &d, returnQ);
+            //gmp_printf("post\n\trx %Zd, ry %Zd, rz %Zd\n", returnQ->X, returnQ->Y, returnQ->Z);
+            //gmp_printf("postp\n\tx = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
+            if(mpz_cmp_ui(returnQ->X, 0) == 0)
+            {
+                if(mpz_cmp_ui(returnQ->Y, 1) == 0)
+                {
+                    if(mpz_cmp_ui(returnQ->Z, 0) == 0)
+                    {
+                        printf("point to infinity for EZn, bad luck check 3\n");
+                        return 2;
+                    }
+                }
+            }
             //sleep(1);
 
             if(d.flag)
@@ -439,12 +535,34 @@ value if op1 < op2.
                 mpz_t newFactor;
                 mpz_init(newFactor);
                 mpz_gcd(newFactor, pd.n, d.d);
-                gmp_printf("found factor %Zd\n", newFactor);
+
+                if(mpz_cmp(newFactor, pd.n) == 0)
+                {
+                    printf("bad luck\n");
+                    mpz_clear(newFactor);
+                    return 0;
+                }
+                gmp_printf("-------------------------------------\n\n\tfound factor %Zd\n\n-------------------------------------\n\n", newFactor);
 
                 mpz_set(*factor, newFactor);
 
                 return 1;
             }
+
+            /*gmp_printf("qqqqqpost\n\trx %Zd, ry %Zd, rz %Zd\n", returnQ->X, returnQ->Y, returnQ->Z);
+            gmp_printf("qqqqpostp\n\tx = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
+*/
+            mpz_set(P.Z, returnQ->Z);
+            mpz_set(P.Y, returnQ->Y);
+            mpz_set(P.X, returnQ->X);
+
+            /*gmp_printf("post\n\trx %Zd, ry %Zd, rz %Zd\n", returnQ->X, returnQ->Y, returnQ->Z);
+            gmp_printf("postp\n\tx = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
+*/
+            /*mpz_set_ui(returnQ->X, 0);
+            mpz_set_ui(returnQ->Y, 0);
+            mpz_set_ui(returnQ->Z, 0);
+*/
 
             //the cycle stops if I find a non invertible denominator in the addition slope
         }
@@ -457,17 +575,26 @@ value if op1 < op2.
         mpz_nextprime(primen, primen);
         //gmp_printf("%Zd\n\n", primen);
 
+
     }
     //printf("cycle failed\n");
     mpz_set(returnQ->X, P.X);
     mpz_set(returnQ->Y, P.Y);
     mpz_set(returnQ->Z, P.Z);
 
+
+
     mpz_clear(primen);
 
     mpz_clear(P.X);
     mpz_clear(P.Y);
     mpz_clear(P.Z);
+
+    /*mpz_clear(res.X);
+    mpz_clear(res.Y);
+    mpz_clear(res.Z);
+*/
+
 
     return 0;
 
@@ -502,9 +629,9 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
 
     mpz_t B2;
     mpz_init(B2);
-    mpz_mul_ui(B2, pd.stageOneB, 10);
+    mpz_mul_ui(B2, pd.stageOneB, 100);
 
-    struct ECpoint Qi, term2;
+    struct ECpoint Qi, term2, res, res2;
 
     struct ECpoint * previousCalc;
 
@@ -526,24 +653,34 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
     mpz_set(term2.Y, Q.Y);
     mpz_set(term2.Z, Q.Z);
 
+    mpz_init(res.X);
+    mpz_init(res.Y);
+    mpz_init(res.Z);
+
+    mpz_init(res2.X);
+    mpz_init(res2.Y);
+    mpz_init(res2.Z);
+
     struct nonInvertibleD d;
     mpz_init(d.d);
     d.flag = 0;
 
 
-    //gmp_printf("qx %Zd, qy %Zd, qz %Zd\n", Q.X, Q.Y, Q.Z);
+    //gmp_printf("stage 2 con qx %Zd, qy %Zd, qz %Zd\n", Q.X, Q.Y, Q.Z);
     //sleep(1);
 
     mpz_nextprime(nextq, pd.stageOneB);
     mpz_nextprime(q, pd.stageOneB);
 
-    *previousCalc = ECmultiplyTraditional(previousCalc, q, EC, pd, &d, previousCalc);
+    //*previousCalc = ECmultiplyTraditional(previousCalc, q, EC, pd, &d, previousCalc);
+    //sostituire con una cosa tipo
+    res = ECmultiplyTraditional(previousCalc, q, EC, pd, &d, &res);
+
+
     //P = ECmultiplyTraditional(&P, primen, EC, pd, &d, &P);
 
     //gmp_printf("x %Zd, y %Zd, z %Zd\n", Qi.X, Qi.Y, Qi.Z);
     //sleep(1);
-
-
 
     while(mpz_cmp(q, B2) <= 0)
     {
@@ -551,9 +688,12 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
         mpz_nextprime(nextq, q);
         mpz_sub(delta, nextq, q);
 
-        term2 = ECmultiplyTraditional(&term2, delta, EC, pd, &d, &term2);
+        res2 = ECmultiplyTraditional(&term2, delta, EC, pd, &d, &res2);
 
-        previousCalc = add(previousCalc, &term2, EC, pd, &d, previousCalc);
+        //previousCalc = add(previousCalc, &term2, EC, pd, &d, previousCalc);
+        //printf("\n\n\n now step 2\n\n\n");
+        //sleep(3);
+        add2(&res, &res2, EC, pd, &d, previousCalc);
         //gmp_printf("x %Zd, y %Zd, z %Zd\n", previousCalc->X, previousCalc->Y, previousCalc->Z);
         //sleep(1);
         //devo tenere in memoria la precedente moltiplicazione e fare quella nuova, moltiplicando Q per deltai = qi+1 - qi
@@ -564,7 +704,13 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
             mpz_t newFactor;
             mpz_init(newFactor);
             mpz_gcd(newFactor, pd.n, d.d);
-            gmp_printf("found factor during stage two %Zd\n", newFactor);
+            if(mpz_cmp(newFactor, pd.n) == 0)
+            {
+                mpz_clear(newFactor);
+                printf("bad luck\n");
+                return 0;
+            }
+            gmp_printf("------------------------------------------------------\n\n\tfound factor during stage two %Zd\n\n-----------------------------------------------------\n", newFactor);
 
             return 1;
 
@@ -572,6 +718,10 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
         else
         {
             mpz_swap(q, nextq);
+
+            mpz_set(res.X, previousCalc->X);
+            mpz_set(res.Y, previousCalc->Y);
+            mpz_set(res.Z, previousCalc->Z);
 
             /*mpz_nextprime(q, q);
 
@@ -637,5 +787,108 @@ void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct pr
     mpz_clear(aX);
     mpz_clear(temp);
     //gmp_printf("%Zd\n", EC->b);
+
+}
+
+void optimizedRandomEC(struct weirstrassEC * EC, struct ECpoint * Q, struct problemData pd, gmp_randstate_t state)
+{
+    //random sigma, derive u v anc C from this
+
+    //initialize random state
+
+
+    //generate random sigma in [6, n-1]
+    unsigned long int six = 6;
+    mpz_t maxsigma, sigma;
+    mpz_init(maxsigma);
+    mpz_init(sigma);
+    ;
+    mpz_sub_ui(maxsigma, pd.n, six);
+    mpz_urandomm(sigma, state, maxsigma);
+    mpz_add_ui(sigma, sigma, six);
+
+    //the curve is determined by these values
+
+    //u
+    mpz_t squaresigma, nomodval, u;
+    mpz_init(squaresigma);
+    mpz_init(nomodval);
+    mpz_init(u);
+
+    mpz_pow_ui(squaresigma, sigma, 2);
+    unsigned long int five = 5;
+    mpz_sub_ui(nomodval, squaresigma, five);
+    mpz_mod(u, nomodval, pd.n);
+
+    //v
+    mpz_t foursigma, v;
+    mpz_init(foursigma);
+    mpz_init(v);
+
+    unsigned long int four = 4;
+    mpz_mul_ui(foursigma, sigma, four);
+    mpz_mod(v, foursigma, pd.n);
+
+    //C
+
+
+    //coordinates for initial point Q (Montgomery representation)
+    mpz_powm_ui(Q->X, u, 3, pd.n);
+    //y = s^2-1)*s^2-25)*s^4-25
+
+    mpz_t term1, term2, sigmafour, term3;
+    mpz_init(term1);
+    mpz_init(term2);
+    mpz_init(term3);
+    mpz_init(sigmafour);
+
+    mpz_sub_ui(term1, squaresigma, 1);
+    mpz_sub_ui(term2, squaresigma, 25);
+    mpz_pow_ui(sigmafour, squaresigma, 2);
+    mpz_sub_ui(term3, sigmafour, 25);
+
+    mpz_mul(Q->Y, term1, term2);
+    mpz_mul(Q->Y, Q->Y, term3);
+    mpz_mod(Q->Y, Q->Y, pd.n);
+
+    mpz_powm_ui(Q->Z, v, 3, pd.n);
+
+    //coordinates for elliptic curve
+    mpz_t u3, partial1, partial2, partial3;
+    mpz_init(u3);
+    mpz_init(partial1);
+    mpz_init(partial2);
+    mpz_init(partial3);
+
+    mpz_divexact(EC->b, u, Q->Z);
+
+    mpz_sub(partial1, v, u);
+    mpz_pow_ui(partial1, partial1, 3);
+
+    mpz_mul_ui(u3, u, 3);
+    mpz_add(partial2, u3, v);
+
+    mpz_mul(partial3, Q->X, v);
+    mpz_mul_ui(partial3, partial3, 4);
+
+    mpz_mul(partial1, partial1, partial2);
+    mpz_div(partial1, partial1, partial3);
+    mpz_sub_ui(EC->a, partial1, 2);
+
+    mpz_clear(u);
+    mpz_clear(v);
+    mpz_clear(partial1);
+    mpz_clear(partial2);
+    mpz_clear(partial3);
+    mpz_clear(term1);
+    mpz_clear(term2);
+    mpz_clear(term3);
+    mpz_clear(u3);
+    mpz_clear(sigmafour);
+    mpz_clear(sigma);
+    mpz_clear(squaresigma);
+    mpz_clear(nomodval);
+    mpz_clear(foursigma);
+    mpz_clear(maxsigma);
 
 }

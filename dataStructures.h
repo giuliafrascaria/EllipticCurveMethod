@@ -56,6 +56,9 @@ struct ECpoint negate(struct ECpoint *P);
 struct ECpoint *doubleec(struct ECpoint *P, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD *d, struct ECpoint * res);
 struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);
 struct ECpoint ECmultiplyMontgomery(struct ECpoint Q, mpz_t p);
+void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint *res);
+void sub2(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);
+void doubleec2(struct ECpoint * P, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD *d, struct ECpoint *res);
 
 
 #endif //ECM_DATASTRUCTURES_H
