@@ -265,7 +265,8 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
             if(digits > maxdigits)
             {
 
-                if(pthread_mutex_trylock(&(stage2mtx[k])) == 0)
+                //if(pthread_mutex_trylock(&(stage2mtx[k])) == 0)
+                if(pthread_mutex_lock(&(stage2mtx[0])) == 0)
                 {
                     printf("thread %ld locked %d mtxfor %d digits \n", pthread_self(), k, digits);
 
@@ -905,9 +906,9 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     //mi serve un parametro D grande circa sqrtB2
 
     struct JsElem head;
-    struct JsElem list;
-    list.next = NULL;
-    head.next = &list;
+    /*struct JsElem list;
+    list.next = NULL;*/
+    head.next = NULL;
 
     mpz_t B2, D, Mmin, Mmax, Dhalf, t1,t2;
     mpz_init(B2);
@@ -949,15 +950,31 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
 
             //add i to the set Is
 
-            static struct JsElem cell;
-            el = &cell;
-            el->index = i;
-            el->next = head.next;
-            head.next = el;
+            struct JsElem *cell  = malloc(sizeof(struct JsElem));
 
-            printf("aggiungo elemento %ld a lista\n", el->index);
+            cell->index = i;
+            cell->next = head.next;
+            if(head.next == NULL)
+            {
+                printf("found null\n");
+                sleep(1);
+            }
+
+            //el = &cell;
+            head.next = cell;
+
+            printf("aggiungo elemento %ld a lista\n", cell->index);
         }
     }
+
+    /*struct JsElem * in = head.next;
+    while(in != NULL)
+    {
+        printf("found el %ld in list\n", in->index);
+        in = in->next;
+        sleep(1);
+
+    }*/
 
     mpz_t primeTableLen, m, mD, primeCandidate;
     mpz_init(primeTableLen);
@@ -1077,7 +1094,7 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
 
     printf("qui2\n\n");
 
-    struct JsElem * listEl;
+    volatile struct JsElem * listEl;
 
     printf("primelen1 = %ld\nprimelen2 = %ld\n",  primeLen + 1, arraylen);
 
@@ -1094,12 +1111,14 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
         while(listEl != NULL)
         {
             printf("index k = %ld\nindex i = %ld\nlen1 = %ld\nlen2 = %ld\n", k, listEl->index, primeLen + 1, arraylen);
-            if(primaTable[k][el->index] == 1)
+            if(primaTable[k][listEl->index] == 1)
             {
                 printf("quiccc\n\n");
-                mpz_set(jQ0.X, points[el->index].X);
-                mpz_set(jQ0.Y, points[el->index].Y);
-                mpz_set(jQ0.Z, points[el->index].Z);
+                mpz_set(jQ0.X, points[listEl->index].X);
+                mpz_set(jQ0.Y, points[listEl->index].Y);
+                mpz_set(jQ0.Z, points[listEl->index].Z);
+
+                printf("naaaazapegna\n\n");
 
                 //den ← den · (x.R*z.jQ0 − x.jQ0*z.R)
                 mpz_mul(partial1, R.X, jQ0.Z);
@@ -1108,10 +1127,13 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
 
                 mpz_mul(den, den, partial3);
             }
+            sleep(1);
+            printf("è proprio ora di cambiare il listEl!\n\n");
             listEl = listEl->next;
-            //printf("quibbb\n\n");
+
         }
         printf("sasfasd\n");
+        sleep(1);
         add2(&R, &P, EC, pd, &d, &R);
         //while(scorro lista collegata di Js)
             //if(primetable[m][js] == 1)
@@ -1120,6 +1142,7 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     }
 
     printf("qui3\n\n");
+    sleep(1);
 
 
     mpz_gcd(q, den, pd.n);
