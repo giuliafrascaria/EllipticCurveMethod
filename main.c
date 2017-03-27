@@ -859,6 +859,7 @@ void optimizedRandomEC(struct weirstrassEC * EC, struct ECpoint * Q, struct prob
     mpz_init(partial3);
 
     mpz_div(EC->b, u, Q->Z);
+    mpz_mod(EC->b, EC->b, pd.n);
 
     mpz_sub(partial1, v, u);
     mpz_pow_ui(partial1, partial1, 3);
@@ -872,6 +873,7 @@ void optimizedRandomEC(struct weirstrassEC * EC, struct ECpoint * Q, struct prob
     mpz_mul(partial1, partial1, partial2);
     mpz_div(partial1, partial1, partial3);
     mpz_sub_ui(EC->a, partial1, 2);
+    mpz_mod(EC->a, EC->a, pd.n);
 
     mpz_clear(u);
     mpz_clear(v);
@@ -998,8 +1000,9 @@ void efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemD
     printf("main computation for stage two\n");
 
     //d ← 1, Q ← DQ0, R ← MminQ
-    mpz_t d;
+    mpz_t d, q;
     mpz_init(d);
+    mpz_init(q);
     mpz_set_ui(d, 1);
 
     struct ECpoint P, R;
@@ -1011,8 +1014,23 @@ void efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemD
     mpz_init(R.Y);
     mpz_init(R.Z);
 
+    for(unsigned long k = 0; k <= primeLen; k++)     //m = k+Mmin
+    {
+        //while(scorro lista collegata di Js)
+            //if(primetable[m][js] == 1)
+                //faccio cose
+        //R = R + Q
+    }
 
-
-
-
+    mpz_gcd(q, d, pd.n);
+    if(mpz_cmp_ui(q, 1) > 0)
+    {
+        printf("success in stage two\n");
+        //return q
+    }
+    else
+    {
+        printf("failed\n");
+        //fail
+    }
 }
