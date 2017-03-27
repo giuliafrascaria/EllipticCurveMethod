@@ -49,6 +49,12 @@ struct nonInvertibleD
     mpz_t d;
 };
 
+struct JsElem
+{
+    unsigned long index;
+    struct JsElem * next;
+};
+
 void addh();
 void doubleh();
 struct ECpoint * add(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);

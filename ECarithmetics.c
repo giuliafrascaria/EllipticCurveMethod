@@ -360,7 +360,6 @@ struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC 
     mpz_mod(PandQ->X, PandQ->X, pd.n);
 
 
-
     //calculate y3
     //m(x3 - x1)
     //printf("calculating y3\n");
@@ -643,6 +642,9 @@ struct ECpoint negate(struct ECpoint *P)
     return *P;
 }
 
-
+void montgomeryLadder()
+{
+    //efficient calculation of kP
+}
 
 

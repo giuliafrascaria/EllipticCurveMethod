@@ -17,8 +17,6 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd);
 void getBBest(int logp, mpz_t * B);
 void * loop(void * k);
 void optimizedRandomEC(struct weirstrassEC * EC, struct ECpoint * Q, struct problemData pd, gmp_randstate_t state);
-
-
 //void randomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
 //void stageOne(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
 void randomECtraditional(struct weirstrassEC * EC, struct ECpoint  *Q, struct problemData pd, gmp_randstate_t state);
@@ -860,7 +858,7 @@ void optimizedRandomEC(struct weirstrassEC * EC, struct ECpoint * Q, struct prob
     mpz_init(partial2);
     mpz_init(partial3);
 
-    mpz_divexact(EC->b, u, Q->Z);
+    mpz_div(EC->b, u, Q->Z);
 
     mpz_sub(partial1, v, u);
     mpz_pow_ui(partial1, partial1, 3);
@@ -890,5 +888,131 @@ void optimizedRandomEC(struct weirstrassEC * EC, struct ECpoint * Q, struct prob
     mpz_clear(nomodval);
     mpz_clear(foursigma);
     mpz_clear(maxsigma);
+
+}
+
+void efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
+{
+
+    printf("precomputation for stage two\n");
+    //precalcolo: lista dei primi tra B1 e B2, differenze tra adiacenti
+    //mi serve un parametro D grande circa sqrtB2
+
+    struct JsElem head;
+    struct JsElem list;
+    list.next = NULL;
+    head.next = &list;
+
+    mpz_t B2, D, Mmin, Mmax, Dhalf, t1,t2;
+    mpz_init(B2);
+    mpz_init(D);
+    mpz_init(Mmax);
+    mpz_init(Mmin);
+    mpz_init(Dhalf);
+    mpz_init(t1);
+    mpz_init(t2);
+
+    mpz_mul_ui(B2, pd.stageOneB, 100);
+    mpz_sqrt(D, B2);
+
+    //MMIN ← (B1 +D/2)/D, MMAX ← (B2 −D/2)/D  il primo parte intera inferiore, il secondo parte superiore
+    mpz_div_ui(Dhalf, D, 2);
+    mpz_add(t1, pd.stageOneB, Dhalf);
+    mpz_div(Mmin, t1, D);
+
+    mpz_sub(t2, B2, Dhalf);
+    mpz_div(Mmax, t2, D);
+
+    mpz_t gcdVal;
+    mpz_init(gcdVal);
+
+
+    unsigned long arraylen = mpz_get_ui(Dhalf);
+    mpz_t GCDtable[arraylen];
+
+
+    for(unsigned long i = 0; i < arraylen; i++)
+    {
+        mpz_init(GCDtable[i]);
+        mpz_gcd_ui(gcdVal, D, i);
+
+        if(mpz_cmp_ui(gcdVal, 1) == 0)
+        {
+            mpz_set_ui(GCDtable[i], 1);
+
+            //add i to the set Is
+            struct JsElem el;
+            el.index = i;
+            el.next = head.next;
+            head.next = &el;
+        }
+    }
+
+    mpz_t primeTableLen, m, mD, primeCandidate;
+    mpz_init(primeTableLen);
+    mpz_init(m);
+    mpz_init(mD);
+    mpz_init(primeCandidate);
+
+    mpz_sub(primeTableLen, Mmax, Mmin);
+    unsigned long primeLen = mpz_get_ui(primeTableLen);
+    int primaTable[primeLen + 1][arraylen];
+
+    for(unsigned long k = 0; k <= primeLen; k++)     //wrong index
+    {
+        for(unsigned long j = 0; j < arraylen; j++)
+        {
+
+            // m = Mmin+k
+            mpz_add_ui(m, Mmin, k);
+            mpz_mul(mD, m, D);
+
+            mpz_add_ui(primeCandidate, mD, j);
+            if(mpz_probab_prime_p(primeCandidate, 20) == 2)     //the number is prime
+            {
+                primaTable[k][j] = 1;
+            }
+            else
+            {
+                mpz_sub_ui(primeCandidate, mD, j);
+                if(mpz_probab_prime_p(primeCandidate, 20) == 2)
+                {
+                    primaTable[k][j] = 1;
+                }
+            }
+
+        }
+    }
+
+    //Q = Q0
+    for(unsigned int k = 0; k < arraylen; k = k+2)  //arraylen = DHalf
+    {
+        if(mpz_cmp_ui(GCDtable[k], 1) == 0)
+        {
+            //store Q in S
+        }
+        //Q = 2*Q0 + Q
+    }
+
+    //--------------------------MAIN COMPUTATION-----------------------------------
+    printf("main computation for stage two\n");
+
+    //d ← 1, Q ← DQ0, R ← MminQ
+    mpz_t d;
+    mpz_init(d);
+    mpz_set_ui(d, 1);
+
+    struct ECpoint P, R;
+    mpz_init(P.X);
+    mpz_init(P.Y);
+    mpz_init(P.Z);
+
+    mpz_init(R.X);
+    mpz_init(R.Y);
+    mpz_init(R.Z);
+
+
+
+
 
 }
