@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "dataStructures.h"
-#include "gc/include/gc/gc.h"
 #include <unistd.h>
 #include <math.h>
 #include <pthread.h>
@@ -131,7 +130,7 @@ void * loop(void * k)
 
 
         //gmp_printf("BBest = %Zd\n\n", pd.stageOneB);
-        for(i = 0; i < iterations/8; i++)       //repeat w^w times
+        for(i = 0; i < iterations/20; i++)       //repeat w^w times
         {
             success = classicalECM(pd, &factor, state, cont, primeLog);
             if(success == 1)
@@ -268,19 +267,20 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
                 //if(pthread_mutex_trylock(&(stage2mtx[k])) == 0)
                 if(pthread_mutex_lock(&(stage2mtx[0])) == 0)
                 {
-                    printf("thread %ld locked %d mtxfor %d digits \n", pthread_self(), k, digits);
+                    //printf("thread %ld locked %d mtxfor %d digits \n", pthread_self(), k, digits);
 
                     maxdigits = digits;
                     //success = stageTwo(EC, result, pd);
                     success = efficientStageTwo(EC, result, pd);
                     if(success)
                     {
-                        printf("successful stage two for %d digits\n", digits/3);
+                        printf("successful stage two\n");
                     }
                     printf("thread %ld in stage two for %d digits\n", pthread_self(),digits/3);
                     //sleep(1);
 
-                    pthread_mutex_unlock(&stage2mtx[k]);
+                    //pthread_mutex_unlock(&(stage2mtx[k]));
+                    pthread_mutex_unlock(&(stage2mtx[0]));
                     //printf("thread %ld leaving stage two for ln = %d\n", pthread_self(),digits);
                     return success;
                 }
@@ -901,6 +901,11 @@ void optimizedRandomEC(struct weirstrassEC * EC, struct ECpoint * Q, struct prob
 int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
 {
 
+    /*gmp_printf("Qx = %Zd\n", Q.X);
+    gmp_printf("Qy = %Zd\n", Q.Y);
+    gmp_printf("Qz = %Zd\n", Q.Z);*/
+
+
     printf("precomputation for stage two\n");
     //precalcolo: lista dei primi tra B1 e B2, differenze tra adiacenti
     //mi serve un parametro D grande circa sqrtB2
@@ -927,19 +932,22 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     mpz_add(t1, pd.stageOneB, Dhalf);
     mpz_div(Mmin, t1, D);
 
+    gmp_printf("Mmin = %Zd\n", Mmin);
+
     mpz_sub(t2, B2, Dhalf);
     mpz_div(Mmax, t2, D);
+
+    gmp_printf("Mmax = %Zd\n", Mmax);
 
     mpz_t gcdVal;
     mpz_init(gcdVal);
 
 
     unsigned long arraylen = mpz_get_ui(Dhalf);
-    mpz_t GCDtable[arraylen];
+    mpz_t GCDtable[arraylen + 1];
 
-    struct JsElem * el;
 
-    for(unsigned long i = 0; i < arraylen; i++)
+    for(unsigned long i = 1; i <= arraylen; i++)
     {
         mpz_init(GCDtable[i]);
         mpz_gcd_ui(gcdVal, D, i);
@@ -954,16 +962,12 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
 
             cell->index = i;
             cell->next = head.next;
-            if(head.next == NULL)
-            {
-                printf("found null\n");
-                sleep(1);
-            }
+
 
             //el = &cell;
             head.next = cell;
 
-            printf("aggiungo elemento %ld a lista\n", cell->index);
+            //printf("aggiungo elemento %ld a lista\n", cell->index);
         }
     }
 
@@ -984,13 +988,13 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
 
     mpz_sub(primeTableLen, Mmax, Mmin);
     unsigned long primeLen = mpz_get_ui(primeTableLen);
-    int primaTable[primeLen + 1][arraylen];
+    int primaTable[primeLen + 1][arraylen + 1];
 
-    printf("primelen1 = %ld\nprimelen2 = %ld\n",  primeLen + 1, arraylen);
+    //printf("primelen1 = %ld\nprimelen2 = %ld\n",  primeLen + 1, arraylen);
 
     for(unsigned long k = 0; k <= primeLen; k++)     //wrong index
     {
-        for(unsigned long j = 0; j < arraylen; j++)
+        for(unsigned long j = 1; j <= arraylen; j++)
         {
 
             // m = Mmin+k
@@ -1000,6 +1004,7 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
             mpz_add_ui(primeCandidate, mD, j);
             if(mpz_probab_prime_p(primeCandidate, 20) == 2)     //the number is prime
             {
+                //printf("case1\n");
                 primaTable[k][j] = 1;
             }
             else
@@ -1007,6 +1012,7 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
                 mpz_sub_ui(primeCandidate, mD, j);
                 if(mpz_probab_prime_p(primeCandidate, 20) == 2)
                 {
+                    //printf("case2\n");
                     primaTable[k][j] = 1;
                 }
             }
@@ -1032,25 +1038,51 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     mpz_init(two);
     mpz_set_ui(two, 2);
 
-    struct ECpoint points[arraylen];    //DHalf
+    struct ECpoint points[arraylen + 1];    //DHalf
     struct nonInvertibleD d;
     mpz_init(d.d);
+    d.flag = 0;
 
-    for(unsigned int k = 0; k < arraylen; k = k+2)  //arraylen = DHalf
+    res = ECmultiplyTraditional(&P, two, EC, pd, &d, &res);
+
+    /*gmp_printf("resx = %Zd\n", res.X);      //non trovo più a zero
+    gmp_printf("resy = %Zd\n", res.Y);
+    gmp_printf("resz = %Zd\n", res.Z);*/
+
+
+    for(unsigned long k = 1; k <= arraylen; k++)  //arraylen = DHalf
     {
+        mpz_init(points[k].X);
+        mpz_init(points[k].Y);
+        mpz_init(points[k].Z);
+    }
+
+    for(unsigned long k = 1; k <= arraylen; k = k+2)  //arraylen = DHalf
+    {
+
         if(mpz_cmp_ui(GCDtable[k], 1) == 0)
         {
             //store Q in S
-            mpz_init(points[k].X);
-            mpz_init(points[k].Y);
-            mpz_init(points[k].Z);
+
+            /*printf("storing P in set\n");
+
+            gmp_printf("Px = %Zd\n", P.X);
+            gmp_printf("Py = %Zd\n", P.Y);
+            gmp_printf("Pz = %Zd\n", P.Z); */         //no more: always storing the same!!!! BUG
 
             mpz_set(points[k].X, P.X);
             mpz_set(points[k].Y, P.Y);
             mpz_set(points[k].Z, P.Z);
+
+            /*printf("saving point in index %ld\n", k);
+
+            gmp_printf("Pointsx = %Zd\n", points[k].X);
+            gmp_printf("Pointsy = %Zd\n", points[k].Y);
+            gmp_printf("Pointsz = %Zd\n", points[k].Z);*/
         }
         //Q = 2*Q0 + Q
-        res = ECmultiplyTraditional(&Q, two, EC, pd, &d, &res);
+
+
         add2(&res, &P, EC, pd, &d, &P);
 
     }
@@ -1083,7 +1115,7 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     mpz_init(jQ0.Z);
 
 
-    printf("qui\n\n");
+    //printf("qui\n\n");
 
     //S = DQ0
     S = ECmultiplyTraditional(&Q, D, EC, pd, &d, &S);
@@ -1092,33 +1124,40 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
 
     //struct JsElem * el;
 
-    printf("qui2\n\n");
+    //printf("qui2\n\n");
 
     volatile struct JsElem * listEl;
 
-    printf("primelen1 = %ld\nprimelen2 = %ld\n",  primeLen + 1, arraylen);
+    //printf("primelen1 = %ld\nprimelen2 = %ld\n",  primeLen + 1, arraylen);
 
 
     for(unsigned long k = 0; k <= primeLen; k++)     //m = k+Mmin
     {
-        printf("quiaaa\n\n");
+        //printf("quiaaa\n\n");
 
         listEl = head.next;
         mpz_add_ui(mIndex, Mmin, k);
 
-        printf("quiaaa\n\n");
+        //printf("quiaaa\n\n");
 
         while(listEl != NULL)
         {
-            printf("index k = %ld\nindex i = %ld\nlen1 = %ld\nlen2 = %ld\n", k, listEl->index, primeLen + 1, arraylen);
+            //printf("index k = %ld\nindex i = %ld\nlen1 = %ld\nlen2 = %ld\n", k, listEl->index, primeLen + 1, arraylen);
             if(primaTable[k][listEl->index] == 1)
             {
-                printf("quiccc\n\n");
-                mpz_set(jQ0.X, points[listEl->index].X);
-                mpz_set(jQ0.Y, points[listEl->index].Y);
-                mpz_set(jQ0.Z, points[listEl->index].Z);
+                //printf("quiccc\n\n");
+                mpz_set(jQ0.X, (points[(listEl->index)]).X);
+                mpz_set(jQ0.Y, (points[(listEl->index)]).Y);
+                mpz_set(jQ0.Z, (points[(listEl->index)]).Z);
 
-                printf("naaaazapegna\n\n");
+                /*printf("retrieving %ld\n", listEl->index);
+                gmp_printf("Pointsx = %Zd\n", (points[(listEl->index)]).X);
+                gmp_printf("Pointsy = %Zd\n", (points[(listEl->index)]).Y);
+                gmp_printf("Pointsz = %Zd\n", (points[(listEl->index)]).Z);
+
+                sleep(2);*/
+
+                //printf("naaaazapegna\n\n");
 
                 //den ← den · (x.R*z.jQ0 − x.jQ0*z.R)
                 mpz_mul(partial1, R.X, jQ0.Z);
@@ -1126,14 +1165,17 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
                 mpz_sub(partial3, partial1, partial2);
 
                 mpz_mul(den, den, partial3);
+
+                //gmp_printf("ecco un den = %Zd\n", den);
+                //sleep(1);
             }
-            sleep(1);
-            printf("è proprio ora di cambiare il listEl!\n\n");
+            //sleep(1);
+            //printf("time to cambiare il listEl!\n\n");
             listEl = listEl->next;
 
         }
-        printf("sasfasd\n");
-        sleep(1);
+        //printf("sasfasd\n");
+        //sleep(1);
         add2(&R, &P, EC, pd, &d, &R);
         //while(scorro lista collegata di Js)
             //if(primetable[m][js] == 1)
@@ -1141,17 +1183,29 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
         //R = R + Q
     }
 
-    printf("qui3\n\n");
-    sleep(1);
+
+    mpz_mod(den, den, pd.n);
 
 
     mpz_gcd(q, den, pd.n);
+
+    gmp_printf("ecco a voi d = %Zd\n", den);
+    gmp_printf("ecco a voi q = %Zd\n", q);
+    //sleep(1);
+
     if(mpz_cmp_ui(q, 1) > 0)
     {
-        printf("-------------------------------------------\n\n\tsuccess in stage two----------------------------------\n");
-        gmp_printf("\t%Zd\n", q);
-        //return q
-        return 1;
+        if(mpz_cmp(q, pd.n) < 0)
+        {
+            printf("-------------------------------------------success in stage two----------------------------------\n");
+            gmp_printf("\t%Zd\n---------------------------------------------------------------------------\n", q);
+            //return q
+            return 1;
+        }
+        printf("\n\n\noibo che coincidenza q è proprio n\n\n\n");
+        //fail
+        return 0;
+
     }
     else
     {

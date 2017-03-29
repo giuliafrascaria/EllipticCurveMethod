@@ -6,7 +6,6 @@
 #include "dataStructures.h"
 #include <unistd.h>
 #include <stdlib.h>
-#include "gc/include/gc/gc.h"
 
 
 struct ECpoint * sub(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);
