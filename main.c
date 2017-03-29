@@ -264,14 +264,14 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
             if(digits > maxdigits)
             {
 
-                //if(pthread_mutex_trylock(&(stage2mtx[k])) == 0)
-                if(pthread_mutex_lock(&(stage2mtx[0])) == 0)
+                if(pthread_mutex_trylock(&(stage2mtx[k])) == 0)
+                //if(pthread_mutex_lock(&(stage2mtx[0])) == 0)
                 {
                     //printf("thread %ld locked %d mtxfor %d digits \n", pthread_self(), k, digits);
 
                     maxdigits = digits;
-                    //success = stageTwo(EC, result, pd);
-                    success = efficientStageTwo(EC, result, pd);
+                    success = stageTwo(EC, result, pd);
+                    //success = efficientStageTwo(EC, result, pd);
                     if(success)
                     {
                         printf("successful stage two\n");
@@ -279,8 +279,8 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
                     printf("thread %ld in stage two for %d digits\n", pthread_self(),digits/3);
                     //sleep(1);
 
-                    //pthread_mutex_unlock(&(stage2mtx[k]));
-                    pthread_mutex_unlock(&(stage2mtx[0]));
+                    pthread_mutex_unlock(&(stage2mtx[k]));
+                    //pthread_mutex_unlock(&(stage2mtx[0]));
                     //printf("thread %ld leaving stage two for ln = %d\n", pthread_self(),digits);
                     return success;
                 }
@@ -927,6 +927,12 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     mpz_mul_ui(B2, pd.stageOneB, 100);
     mpz_sqrt(D, B2);
 
+    if(mpz_odd_p(D) != 0)
+    {
+        printf("ho un D dispari\n");
+        mpz_add_ui(D, D, 1);
+    }
+
     //MMIN ← (B1 +D/2)/D, MMAX ← (B2 −D/2)/D  il primo parte intera inferiore, il secondo parte superiore
     mpz_div_ui(Dhalf, D, 2);
     mpz_add(t1, pd.stageOneB, Dhalf);
@@ -941,6 +947,9 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
 
     mpz_t gcdVal;
     mpz_init(gcdVal);
+
+    mpz_clear(t1);
+    mpz_clear(t2);
 
 
     unsigned long arraylen = mpz_get_ui(Dhalf);
@@ -967,7 +976,7 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
             //el = &cell;
             head.next = cell;
 
-            //printf("aggiungo elemento %ld a lista\n", cell->index);
+            //printf("aggiungo elemento %lu a lista\n", cell->index);
         }
     }
 
@@ -1004,7 +1013,7 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
             mpz_add_ui(primeCandidate, mD, j);
             if(mpz_probab_prime_p(primeCandidate, 20) == 2)     //the number is prime
             {
-                //printf("case1\n");
+                //printf("casella con j %lu a 1 \t", j);
                 primaTable[k][j] = 1;
             }
             else
@@ -1012,7 +1021,8 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
                 mpz_sub_ui(primeCandidate, mD, j);
                 if(mpz_probab_prime_p(primeCandidate, 20) == 2)
                 {
-                    //printf("case2\n");
+                    //printf("casella con j %lu a 1 \t", j);
+
                     primaTable[k][j] = 1;
                 }
             }
@@ -1184,14 +1194,31 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     }
 
 
-    mpz_mod(den, den, pd.n);
+    //mpz_mod(den, den, pd.n);
 
 
     mpz_gcd(q, den, pd.n);
 
-    gmp_printf("ecco a voi d = %Zd\n", den);
+    //gmp_printf("ecco a voi d = %Zd\n", den);
     gmp_printf("ecco a voi q = %Zd\n", q);
     //sleep(1);
+
+    mpz_clear(R.X);
+    mpz_clear(R.Y);
+    mpz_clear(R.Z);
+    mpz_clear(P.X);
+    mpz_clear(P.Y);
+    mpz_clear(P.Z);
+    mpz_clear(partial1);
+    mpz_clear(partial2);
+    mpz_clear(partial3);
+
+    for(unsigned long k = 1; k <= arraylen; k++)  //arraylen = DHalf
+    {
+        mpz_clear(points[k].X);
+        mpz_clear(points[k].Y);
+        mpz_clear(points[k].Z);
+    }
 
     if(mpz_cmp_ui(q, 1) > 0)
     {
