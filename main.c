@@ -61,10 +61,13 @@ int main(int argc, char ** argv)
     mpz_init(two);
     mpz_set_ui(two, 2);
 
-    ECmultiplyTraditional(&P, two, testEC, pd, &den, &Q);
+
+    //gmp_printf("startx = %Zd\nstarty = %Zd\nstartz = %Zd\n", P.X, P.Y, P.Z);
+
+    Q = doubleAndAdd2(&P, two, testEC, pd, &den);
 
 
-    sleep(5);
+    //sleep(5);
 
 
 
@@ -591,8 +594,8 @@ value if op1 < op2.
             gmp_printf("prep\n\tx = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
             gmp_printf("pre\n\trx %Zd, ry %Zd, rz %Zd\n", returnQ->X, returnQ->Y, returnQ->Z);*/
 
-            gmp_printf("b = %Zd\n\n", EC.b);
-            gmp_printf("qx = %Zd\nqy = %Zd\nqz = %Zd\n", P.X, P.Y, P.Z);
+            /*gmp_printf("b = %Zd\n\n", EC.b);
+            gmp_printf("qx = %Zd\nqy = %Zd\nqz = %Zd\n", P.X, P.Y, P.Z);*/
 
             *returnQ = ECmultiplyTraditional(&P, primen, EC, pd, &d, returnQ);
 

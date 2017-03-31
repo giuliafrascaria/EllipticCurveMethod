@@ -195,6 +195,15 @@ struct ECpoint doubleAndAdd(struct ECpoint * P, mpz_t p,  struct weirstrassEC EC
 
 struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res)
 {
+    struct ECpoint P;
+    mpz_init(P.X);
+    mpz_init(P.Y);
+    mpz_init(P.Z);
+
+    mpz_set(P.X, Q->X);
+    mpz_set(P.Y, Q->Y);
+    mpz_set(P.Z, Q->Z);
+
     if(mpz_cmp_ui(p, 0) == 0)
     {
 
@@ -215,7 +224,7 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
 
         mpz_t n;
         mpz_init(n);
-        mpz_set(n, pd.n); //!!!!!!!!
+        mpz_set(n, p); //!!!!!!!!
 
         mpz_t m;
         mpz_init(m);
@@ -229,9 +238,11 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
 
 //        printf("M : %d\n",(int) binarySizeM);
 //        printf("N : %d\n",(int) mpz_sizeinbase(n, 2));
-//        for(int i= 0; i < mpz_sizeinbase(p, 2); i++){
-//            printf("binaryn = %s\n", binaryn);
-//        }
+//        for(int i = 0; i < mpz_sizeinbase(p, 2); i++){
+/*
+            printf("binaryn = %s\n", binaryn);
+        }
+*/
 
 
         ssize_t size = mpz_sizeinbase(m, 2);
@@ -251,9 +262,9 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
         mpz_init(result.Y);
         mpz_init(result.Z);
 
-        for(int i = (int) (binarySizeM - 3); i >= 1; i--){
+        for(int i = (int) (binarySizeM - 2); i >= 1; i--){
 
-            doubleec2(Q, EC, pd, d, &result);
+            doubleec2(&P, EC, pd, d, &result);
             checkIfCurve(result, EC, pd);
             if(mpz_cmp_ui(result.X, 0) == 0)
             {
@@ -285,9 +296,9 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
                 mpz_set(term1.Z, result.Z);
                 sub2(&term1, Q, EC, pd, d, &result);
             }
-            mpz_set(Q->X, result.X);
-            mpz_set(Q->Y, result.Y);
-            mpz_set(Q->Z, result.Z);
+            mpz_set(P.X, result.X);
+            mpz_set(P.Y, result.Y);
+            mpz_set(P.Z, result.Z);
         }
 
 //        while(j >= 1 && (d->flag == 0))
@@ -340,15 +351,76 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
 //            }
 //            j = j-1;
 //        }
+/*
 
         gmp_printf("risultato di %Zd per il punto\n", p);
 
         gmp_printf("px = %Zd\npy = %Zd\npz = %Zd\n", result.X, result.Y, result.Z);
+*/
 
-        sleep(3);
+        //sleep(3);
 
         return result;
     }
+}
+
+struct ECpoint doubleAndAdd2(struct ECpoint * P, mpz_t p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d)
+{
+    struct ECpoint Q, N;
+    mpz_init(Q.X);
+    mpz_init(Q.Y);
+    mpz_init(Q.Z);
+
+    mpz_init(N.X);
+    mpz_init(N.Y);
+    mpz_init(N.Z);
+
+    mpz_set(N.X, P->X);
+    mpz_set(N.Y, P->Y);
+    mpz_set(N.Z, P->Z);
+
+    mpz_set_ui(Q.X, 0);
+    mpz_set_ui(Q.Y, 1);
+    mpz_set_ui(Q.Z, 0);
+
+
+    size_t binarySizep = mpz_sizeinbase(p, 2);
+
+    char * binaryp = NULL;
+    binaryp = mpz_get_str(binaryp, 2, p);   //ha un bit in più per il segno lie
+
+    struct ECpoint result1, result2;
+
+
+
+    mpz_init(result1.X);
+    mpz_init(result1.Y);
+    mpz_init(result1.Z);
+
+    mpz_init(result2.X);
+    mpz_init(result2.Y);
+    mpz_init(result2.Z);
+
+    for(int i = 0; i < (int) binarySizep; i++)
+    {
+        if(binaryp[i] == '1')
+        {
+            add2(&Q, &N, EC, pd, d, &result1);
+        }
+        doubleec2(&N, EC, pd, d, &result2);
+
+        mpz_set(Q.X, result1.X);
+        mpz_set(Q.Y, result1.Y);
+        mpz_set(Q.Z, result1.Z);
+
+        mpz_set(N.X, result2.X);
+        mpz_set(N.Y, result2.Y);
+        mpz_set(N.Z, result2.Z);
+
+    }
+
+    return Q;
+
 }
 
 /*
