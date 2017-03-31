@@ -31,6 +31,51 @@ pthread_mutex_t stage2mtx[8];
 int main(int argc, char ** argv)
 {
 
+    struct weirstrassEC testEC;
+    struct problemData pdt;
+    mpz_init(pdt.n);
+    mpz_init(testEC.b);
+    mpz_init(testEC.a);
+
+    mpz_set_ui(testEC.b, 1);
+    mpz_set_ui(testEC.a, 1);
+
+    mpz_set_ui(pdt.n, 5);
+
+    struct ECpoint P, Q;
+    struct nonInvertibleD den;
+    mpz_init(den.d);
+    den.flag = 0;
+    mpz_init(P.Z);
+    mpz_init(P.X);
+    mpz_init(P.Y);
+    mpz_init(Q.X);
+    mpz_init(Q.Y);
+    mpz_init(Q.Z);
+
+    mpz_set_ui(P.X, 3);
+    mpz_set_ui(P.Y, 4);
+    mpz_set_ui(P.Z, 1);
+
+    mpz_t two;
+    mpz_init(two);
+    mpz_set_ui(two, 2);
+
+    ECmultiplyTraditional(&P, two, testEC, pd, &den, &Q);
+
+
+    sleep(5);
+
+
+
+
+
+
+
+
+
+
+
     /*int res;
     res = execve("ecmfactor", argv, NULL);*/
 
@@ -84,7 +129,7 @@ int main(int argc, char ** argv)
         return EXIT_FAILURE;
     }*/
 
-    mpz_mul_ui(pd.stageTwoB, pd.stageOneB, 100);
+    mpz_mul_ui(pd.stageTwoB, pd.stageOneB, 100000);
 
 
    // mpz_sqrt(pd.stageTwoB, pd.n);
@@ -152,8 +197,8 @@ void * loop(void * k)
 
 
         ww = pow(w, w);
-        //iterations = lround(ww);
-        iterations = 75;
+        iterations = lround(ww);
+        //iterations = 75;
         printf("process iterating for %ld times\n", iterations);
 
 
@@ -546,6 +591,9 @@ value if op1 < op2.
             gmp_printf("prep\n\tx = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
             gmp_printf("pre\n\trx %Zd, ry %Zd, rz %Zd\n", returnQ->X, returnQ->Y, returnQ->Z);*/
 
+            gmp_printf("b = %Zd\n\n", EC.b);
+            gmp_printf("qx = %Zd\nqy = %Zd\nqz = %Zd\n", P.X, P.Y, P.Z);
+
             *returnQ = ECmultiplyTraditional(&P, primen, EC, pd, &d, returnQ);
 
             //doubleAndAdd(&P, primen, EC, pd, &d, returnQ);
@@ -801,7 +849,7 @@ void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct pr
     //the curve is determined by these values
 
     //sleep(2);
-    mpz_t squareY, cubeX, aX;
+    mpz_t squareY, cubeX;
     mpz_init(squareY);
     mpz_init(cubeX);
     //mpz_init(aX);
@@ -826,7 +874,7 @@ void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct pr
     //gmp_printf("b = %Zd\n", EC->b);
     //gmp_printf("a = %Zd\n", EC->a);
 
-    checkIfCurve(*Q, *EC, pd);
+    //checkIfCurve(*Q, *EC, pd);
     //printf("peh\n");
 
 }

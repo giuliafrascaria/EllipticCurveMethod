@@ -99,7 +99,7 @@ struct ECpoint doubleAndAdd(struct ECpoint * P, mpz_t p,  struct weirstrassEC EC
     mpz_set(Q.Z, P->Z);
 
     doubleec(P, EC, pd, d, &R); //R = 2P
-    checkIfCurve(R, EC, pd);
+    //checkIfCurve(R, EC, pd);
 
 
     ssize_t size = mpz_sizeinbase(binP, 2);
@@ -195,6 +195,165 @@ struct ECpoint doubleAndAdd(struct ECpoint * P, mpz_t p,  struct weirstrassEC EC
 
 struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res)
 {
+    if(mpz_cmp_ui(p, 0) == 0)
+    {
+
+        struct ECpoint infinity;
+        mpz_init(infinity.X);
+        mpz_init(infinity.Y);
+        mpz_init(infinity.Z);
+
+        mpz_set_ui(infinity.X, 0);
+        mpz_set_ui(infinity.Y, 1);
+        mpz_set_ui(infinity.Z, 0);
+        printf("infinity\n");
+
+        return infinity;
+    }
+    else
+    {
+
+        mpz_t n;
+        mpz_init(n);
+        mpz_set(n, pd.n); //!!!!!!!!
+
+        mpz_t m;
+        mpz_init(m);
+        mpz_mul_ui(m, n, 3);
+        size_t binarySizeM = mpz_sizeinbase(m, 2);
+
+        char * binaryn = NULL;
+        binaryn = mpz_get_str(binaryn, 2, n);
+        char * binarym = NULL;
+        binarym = mpz_get_str(binarym, 2, m);
+
+//        printf("M : %d\n",(int) binarySizeM);
+//        printf("N : %d\n",(int) mpz_sizeinbase(n, 2));
+//        for(int i= 0; i < mpz_sizeinbase(p, 2); i++){
+//            printf("binaryn = %s\n", binaryn);
+//        }
+
+
+        ssize_t size = mpz_sizeinbase(m, 2);
+
+        mpz_realloc2(n, (mp_bitcnt_t) size);
+
+//        mp_bitcnt_t j = (mp_bitcnt_t) size-2;
+
+
+        struct ECpoint term1, result;
+        mpz_init(term1.X);
+        mpz_init(term1.Y);
+        mpz_init(term1.Z);
+
+
+        mpz_init(result.X);
+        mpz_init(result.Y);
+        mpz_init(result.Z);
+
+        for(int i = (int) (binarySizeM - 3); i >= 1; i--){
+
+            doubleec2(Q, EC, pd, d, &result);
+            checkIfCurve(result, EC, pd);
+            if(mpz_cmp_ui(result.X, 0) == 0)
+            {
+                if(mpz_cmp_ui(result.Y, 1) == 0)
+                {
+                    if(mpz_cmp_ui(result.Z, 0) == 0)
+                    {
+                        printf("point to infinity for EZn, bad luck check 2\n");
+                        //printf("ritorno 2\n");
+                        return result;
+                    }
+                }
+            }
+            char ni = binaryn[i];
+            char mi = binarym[i];
+            if(mi == '1' && ni == '0')
+            {
+//                printf("mi = %c , ni = %c\n", mi, ni);
+                mpz_set(term1.X, result.X);
+                mpz_set(term1.Y, result.Y);
+                mpz_set(term1.Z, result.Z);
+                add2(&term1, Q, EC, pd, d, &result);
+            }
+            else if(mi == '0' && ni == '1')
+            {
+//                printf("mi = %c , ni = %c\n", mi, ni);
+                mpz_set(term1.X, result.X);
+                mpz_set(term1.Y, result.Y);
+                mpz_set(term1.Z, result.Z);
+                sub2(&term1, Q, EC, pd, d, &result);
+            }
+            mpz_set(Q->X, result.X);
+            mpz_set(Q->Y, result.Y);
+            mpz_set(Q->Z, result.Z);
+        }
+
+//        while(j >= 1 && (d->flag == 0))
+//        {
+//            doubleec2(Q, EC, pd, d, &result);
+//            checkIfCurve(result, EC, pd);
+//            if(mpz_cmp_ui(result.X, 0) == 0)
+//            {
+//                if(mpz_cmp_ui(result.Y, 1) == 0)
+//                {
+//                    if(mpz_cmp_ui(result.Z, 0) == 0)
+//                    {
+//
+//                        return result;
+//                    }
+//                }
+//            }
+//            int mj, nj;
+//            mj = mpz_tstbit(m, j);
+//            nj = mpz_tstbit(n, j);
+//            if((mj == 1) && (nj == 0))
+//            {
+//                mpz_set(term1.X, result.X);
+//                mpz_set(term1.Y, result.Y);
+//                mpz_set(term1.Z, result.Z);
+//                add2(&term1, Q, EC, pd, d, &result);
+//                checkIfCurve(result, EC, pd);
+//            }
+//            if((mj == 0) && (nj == 1)) {
+//                mpz_set(term1.X, result.X);
+//                mpz_set(term1.Y, result.Y);
+//                mpz_set(term1.Z, result.Z);
+//                sub2(&term1, Q, EC, pd, d, &result);
+//                checkIfCurve(result, EC, pd);
+//            }
+//            mpz_set(Q->X, result.X);
+//            mpz_set(Q->Y, result.Y);
+//            mpz_set(Q->Z, result.Z);
+//            if(mpz_cmp_ui(result.X, 0) == 0)
+//            {
+//                if(mpz_cmp_ui(result.Y, 1) == 0)
+//                {
+//                    if(mpz_cmp_ui(result.Z, 0) == 0)
+//                    {
+//                        printf("point to infinity for EZn, bad luck check 2\n");
+//                        //printf("ritorno 2\n");
+//                        return result;
+//                    }
+//                }
+//            }
+//            j = j-1;
+//        }
+
+        gmp_printf("risultato di %Zd per il punto\n", p);
+
+        gmp_printf("px = %Zd\npy = %Zd\npz = %Zd\n", result.X, result.Y, result.Z);
+
+        sleep(3);
+
+        return result;
+    }
+}
+
+/*
+struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res)
+{
     //initialize
     //printf("initializing ladder\n");
     //gmp_printf("\n\n\nx = %Zd , y= %Zd , z= %Zd \n\n\n", Q->X, Q->Y, Q->Z);
@@ -232,6 +391,14 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
         mpz_init(m);
         mpz_mul_ui(m, n, 3);
 
+        char * binarym = malloc(sizeof(*m));
+        //char * binaryP = mpz_get_str(binaryP, 2, p);
+        binarym = mpz_get_str(binarym, 2, m);
+
+        char * binaryn = malloc(sizeof(pd.n));
+        //char * binaryP = mpz_get_str(binaryP, 2, p);
+        binaryn = mpz_get_str(binaryn, 2, pd.n);
+
 
         //size_t mpz_sizeinbase (const mpz t op, int base)
         ssize_t size = mpz_sizeinbase(m, 2);
@@ -241,22 +408,28 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
 
         mp_bitcnt_t j = (mp_bitcnt_t) size-2;
 
-        /*struct ECpoint * P = malloc(sizeof(struct ECpoint));
+        */
+/*struct ECpoint * P = malloc(sizeof(struct ECpoint));
         mpz_init(P->X);
         mpz_init(P->Y);
         mpz_init(P->Z);
 
         mpz_set(P->X, Q->X);
         mpz_set(P->Y, Q->Y);
-        mpz_set(P->Z, Q->Z);*/
+        mpz_set(P->Z, Q->Z);*//*
 
-        /*mpz_set(res->X, Q->X);
+
+        */
+/*mpz_set(res->X, Q->X);
         mpz_set(res->Y, Q->Y);
-        mpz_set(res->Z, Q->Z);*/
+        mpz_set(res->Z, Q->Z);*//*
 
-        /*void mpz_realloc2 (mpz t x, mp bitcnt t n) [Function]
+
+        */
+/*void mpz_realloc2 (mpz t x, mp bitcnt t n) [Function]
 Change the space allocated for x to n bits. The value in x is preserved if it fits, or is set to
-0 if not*/
+0 if not*//*
+
         struct ECpoint term1, result;
         mpz_init(term1.X);
         mpz_init(term1.Y);
@@ -276,12 +449,14 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
             //res = doubleec(res, EC, pd, d, res);
 
             doubleec2(Q, EC, pd, d, &result);
-            checkIfCurve(result, EC, pd);
+            //checkIfCurve(result, EC, pd);
 
             //sleep(1);
 
-            /*gmp_printf("resresresresQx %Zd\n", result.X);
-            gmp_printf("resresresresy %Zd\n\n", result.Y);*/
+            */
+/*gmp_printf("resresresresQx %Zd\n", result.X);
+            gmp_printf("resresresresy %Zd\n\n", result.Y);*//*
+
 
 
             if(mpz_cmp_ui(result.X, 0) == 0)
@@ -313,7 +488,7 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
                 //printf("Adding P and Q\n");
                 //res = add(res, Q, EC, pd, d, res);
                 add2(&term1, Q, EC, pd, d, &result);
-                checkIfCurve(result, EC, pd);
+                //checkIfCurve(result, EC, pd);
 
                 //sleep(1);
 
@@ -329,7 +504,7 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
                 //printf("subtracting p and q\n");
                 //res = sub(res, Q, EC, pd, d, res);
                 sub2(&term1, Q, EC, pd, d, &result);
-                checkIfCurve(result, EC, pd);
+                //checkIfCurve(result, EC, pd);
 
                 //sleep(1);
                 //free(res);
@@ -341,8 +516,10 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
             mpz_set(Q->Z, result.Z);
 
 
-            /*gmp_printf("bbbbbbbQx %Zd\n", Q->X);
-            gmp_printf("bbbbbbbQy %Zd\n\n", Q->Y);*/
+            */
+/*gmp_printf("bbbbbbbQx %Zd\n", Q->X);
+            gmp_printf("bbbbbbbQy %Zd\n\n", Q->Y);*//*
+
 
 
             if(mpz_cmp_ui(result.X, 0) == 0)
@@ -370,6 +547,7 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
         return result;
     }
 }
+*/
 
 struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint *res)
 {
@@ -711,6 +889,7 @@ void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct 
 
     //mpz_mod(res->X, x3, pd.n);
     mpz_set(res->X, x3);
+    mpz_mod(res->X, res->X, pd.n);
 
     mpz_clear(x3);
 
