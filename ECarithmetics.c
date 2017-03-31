@@ -75,7 +75,7 @@ struct ECpoint doubleAndAdd(struct ECpoint * P, mpz_t p,  struct weirstrassEC EC
         exit(EXIT_FAILURE);
     }
 
-    sleep(1);
+    //sleep(1);
 
     struct ECpoint Q, R, res1, res2;
     mpz_init(Q.X);
@@ -99,7 +99,7 @@ struct ECpoint doubleAndAdd(struct ECpoint * P, mpz_t p,  struct weirstrassEC EC
     mpz_set(Q.Z, P->Z);
 
     doubleec(P, EC, pd, d, &R); //R = 2P
-    checkIfCurve(R, EC);
+    checkIfCurve(R, EC, pd);
 
 
     ssize_t size = mpz_sizeinbase(binP, 2);
@@ -125,7 +125,7 @@ struct ECpoint doubleAndAdd(struct ECpoint * P, mpz_t p,  struct weirstrassEC EC
             add2(&Q, &R, EC, pd, d, &res2);    //R = Q + R
             printf("bla2\n");
         }
-        sleep(1);
+        //sleep(1);
 
         mpz_set(Q.X, res1.X);
         mpz_set(Q.Y, res1.Y);
@@ -276,9 +276,9 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
             //res = doubleec(res, EC, pd, d, res);
 
             doubleec2(Q, EC, pd, d, &result);
-            checkIfCurve(result, EC);
+            checkIfCurve(result, EC, pd);
 
-            sleep(1);
+            //sleep(1);
 
             /*gmp_printf("resresresresQx %Zd\n", result.X);
             gmp_printf("resresresresy %Zd\n\n", result.Y);*/
@@ -313,9 +313,9 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
                 //printf("Adding P and Q\n");
                 //res = add(res, Q, EC, pd, d, res);
                 add2(&term1, Q, EC, pd, d, &result);
-                checkIfCurve(result, EC);
+                checkIfCurve(result, EC, pd);
 
-                sleep(1);
+                //sleep(1);
 
                 //free(res);
             }
@@ -329,9 +329,9 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
                 //printf("subtracting p and q\n");
                 //res = sub(res, Q, EC, pd, d, res);
                 sub2(&term1, Q, EC, pd, d, &result);
-                checkIfCurve(result, EC);
+                checkIfCurve(result, EC, pd);
 
-                sleep(1);
+                //sleep(1);
                 //free(res);
             }
 
@@ -550,7 +550,7 @@ void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct 
     //printf("heila\n");
     if(mpz_cmp_ui(P->Z, 0) == 0)
     {
-        //printf("null P\n");
+        printf("null P\n");
         mpz_set(res->X, Q->X);
         mpz_set(res->Y, Q->Y);
         mpz_set(res->Z, Q->Z);
@@ -577,6 +577,10 @@ void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct 
 
     if(mpz_cmp(P->X, Q->X) == 0)
     {
+        //printf("tangente verticale\n");
+
+
+        //m=(3x1^2 + a)/2y1
 
         /*gmp_printf("resx %Zd\n", res->X);
         gmp_printf("resy %Zd\n\n", res->Y);*/
@@ -653,7 +657,8 @@ void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct 
     else
     {
         //calculate m
-        //printf("calculating m 1\n");
+        //printf("tangente non verticale\n");
+
         mpz_t firstterm, secondterm, invertsecond;
         mpz_init(firstterm);
         mpz_init(secondterm);
@@ -704,7 +709,8 @@ void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct 
     mpz_clear(partial);
     mpz_clear(squarem);
 
-    mpz_mod(res->X, x3, pd.n);
+    //mpz_mod(res->X, x3, pd.n);
+    mpz_set(res->X, x3);
 
     mpz_clear(x3);
 
@@ -712,20 +718,29 @@ void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct 
     //gmp_printf("resX after mod = %Zd\nPx = %Zd\n", res->X, P->X);
 
     //calculate y3
-    //m(x3 - x1)
+    //m(x1 - x3) - y1
     //printf("calculating y3\n");
-    mpz_t partial2;
+    mpz_t partial2, partial3;
     mpz_init(partial2);
+    mpz_init(partial3);
 
     //mpz_sub(partial2, P->X, P->X);
     //mpz_mul(P->Y, m, partial2);
 
-    mpz_sub(partial2, res->X, P->X);
+    //mpz_sub(partial2, res->X, P->X);
+    mpz_sub(partial2,  P->X, res->X);
+
+    mpz_mul(partial3, m, partial2);
+
+    mpz_sub(res->Y, partial3, P->Y);
+
+
     //gmp_printf("partial2 = %Zd\n", partial2);
-    mpz_mul(res->Y, m, partial2);
+    //mpz_mul(res->Y, m, partial2);
 
 
     mpz_clear(partial2);
+    mpz_clear(partial3);
     mpz_clear(m);
 
     //mpz_mod(P->Y, P->Y, pd.n);
@@ -801,15 +816,15 @@ void montgomeryLadder()
 }
 
 
-int checkIfCurve(struct ECpoint P, struct weirstrassEC EC)
+int checkIfCurve(struct ECpoint P, struct weirstrassEC EC, struct problemData pd)
 {
     //y^2 = x^3 + ax + b
     //verifico l'uguaglianza
 
-    mpz_t squarey, cubex, ax, sum;
+    mpz_t squarey, cubex, tot, sum;
     mpz_init(squarey);
     mpz_init(cubex);
-    //mpz_init(ax);
+    mpz_init(tot);
     mpz_init(sum);
 
     mpz_pow_ui(squarey, P.Y, 2);
@@ -819,14 +834,28 @@ int checkIfCurve(struct ECpoint P, struct weirstrassEC EC)
     mpz_add(sum, cubex, P.X);
     mpz_add(sum, sum, EC.b);
 
-    if(mpz_cmp(squarey, sum) == 0)
+    mpz_sub(tot, squarey, sum);
+
+    mpz_mod(tot, tot, pd.n);
+
+    mpz_clear(squarey);
+    mpz_clear(cubex);
+    mpz_clear(sum);
+
+    if(mpz_cmp_ui(tot, 0) == 0)
     {
-        printf("verified\n");
+        //printf("verified\n");
+        mpz_clear(tot);
         return 1;
     }
     else
     {
         printf("failed\n");
+        mpz_clear(tot);
+
+        //gmp_printf("Y^2 = %Zd\n", squarey);
+        //gmp_printf("sum = %Zd\n", sum);
+
         return 0;
     }
 

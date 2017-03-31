@@ -791,13 +791,13 @@ void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct pr
     //generate random x, y, a in [0, n-1]
 
     mpz_urandomm(Q->X, state, pd.n);
-    gmp_printf("%Zd\n", Q->X);
+    //gmp_printf("%Zd\n", Q->X);
     mpz_urandomm(Q->Y, state, pd.n);
 
     mpz_set_ui(EC->a, 1);
-    gmp_printf("%Zd\n", Q->Y);
+    //gmp_printf("%Zd\n", Q->Y);
     //mpz_urandomm(EC->a, state, pd.n);       //posso sostituire per avere un A = 1
-    gmp_printf("%Zd\n", EC->a);
+    //gmp_printf("%Zd\n", EC->a);
     //the curve is determined by these values
 
     //sleep(2);
@@ -823,8 +823,11 @@ void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct pr
     mpz_clear(cubeX);
     //mpz_clear(aX);
     mpz_clear(temp);
-    gmp_printf("b = %Zd\n", EC->b);
-    gmp_printf("a = %Zd\n", EC->a);
+    //gmp_printf("b = %Zd\n", EC->b);
+    //gmp_printf("a = %Zd\n", EC->a);
+
+    checkIfCurve(*Q, *EC, pd);
+    //printf("peh\n");
 
 }
 
