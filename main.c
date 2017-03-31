@@ -30,12 +30,17 @@ pthread_mutex_t stage2mtx[8];
 
 int main(int argc, char ** argv)
 {
-    //GC_INIT();
-    if(argc != 2)
+
+    /*int res;
+    res = execve("ecmfactor", argv, NULL);*/
+
+    if(argc != 3)
     {
-        perror("missing number");
+        perror("missing numbers");
         return EXIT_FAILURE;
     }
+
+
     //convert input into internal representation
         //declarations and init
 
@@ -47,6 +52,11 @@ int main(int argc, char ** argv)
         perror("invalid input type");
         return EXIT_FAILURE;
     }
+
+    mpz_t f1, f2;
+    mpz_init(f1);
+    mpz_init(f2);
+    //mpz_nextprime(f1, )
     //choose criteria
         //init
 
@@ -59,11 +69,26 @@ int main(int argc, char ** argv)
     mpz_init(pd.stageTwoB);
     mpz_init(pd.D);
         //assign values
-    mpz_set_ui(pd.stageOneB, 100);
+    //mpz_set_ui(pd.stageOneB, 100);
 
 
-    mpz_sqrt(pd.stageTwoB, pd.n);
-    gmp_printf("square root of n = %Zd\n", pd.stageTwoB);
+    if(mpz_set_str(pd.stageOneB, (const char *) argv[2], 10) != 0)
+    {
+        perror("invalid input type");
+        return EXIT_FAILURE;
+    }
+
+    /*if(mpz_set_str(pd.stageTwoB, (const char *) argv[3], 10) != 0)
+    {
+        perror("invalid input type");
+        return EXIT_FAILURE;
+    }*/
+
+    mpz_mul_ui(pd.stageTwoB, pd.stageOneB, 100);
+
+
+   // mpz_sqrt(pd.stageTwoB, pd.n);
+   // gmp_printf("square root of n = %Zd\n", pd.stageTwoB);
 
 
     //get BBEst
@@ -119,18 +144,21 @@ void * loop(void * k)
     //while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0 && primeLog < maxlog) || pid == 0)
     while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0))
     {
-        getBBest(primeLog, &pd.stageOneB);
+        //getBBest(primeLog, &pd.stageOneB);        //alpertron
+      //  mpz_set_ui(pd.stageOneB, 100);
+
 
         w = primeLog/log(mpz_get_ui(pd.stageOneB));
 
-        ww = pow(w, w);
-        iterations = lround(ww/16);
-        //printf("process looking for factors with approximately %d digits, iterating for %ld times\n", primeLog/3, iterations);
 
+        ww = pow(w, w);
+        //iterations = lround(ww);
+        iterations = 75;
+        printf("process iterating for %ld times\n", iterations);
 
 
         //gmp_printf("BBest = %Zd\n\n", pd.stageOneB);
-        for(i = 0; i < iterations/20; i++)       //repeat w^w times
+        for(i = 0; i < iterations; i++)       //repeat w^w times
         {
             success = classicalECM(pd, &factor, state, cont, primeLog);
             if(success == 1)
@@ -143,11 +171,12 @@ void * loop(void * k)
         primeLog+=3;
         //get new BBest
 
-        //printf("failure, try again and eventually increment B\n\n");
-        //mpz_mul_ui(pd.stageOneB, pd.stageOneB, 100);
+        printf("failure, incrementing B\n\n");
+        //exit(EXIT_FAILURE);
+        mpz_mul_ui(pd.stageOneB, pd.stageOneB, 10);
         //sleep(1);
     }
-    //printf("the size of B1 exceeded max B, process %d quitting\n", pid);
+    printf("found no factor\n");
 
 
 
@@ -187,8 +216,8 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
     mpz_init(EC.a);
     mpz_init(EC.b);
 
-    //randomECtraditional(&EC, &Q, pd, state);
-    optimizedRandomEC(&EC, &Q, pd, state);
+    randomECtraditional(&EC, &Q, pd, state);
+    //optimizedRandomEC(&EC, &Q, pd, state);
 
     /*printf("random init terminated\n");
 
@@ -518,6 +547,9 @@ value if op1 < op2.
             gmp_printf("pre\n\trx %Zd, ry %Zd, rz %Zd\n", returnQ->X, returnQ->Y, returnQ->Z);*/
 
             *returnQ = ECmultiplyTraditional(&P, primen, EC, pd, &d, returnQ);
+
+            //doubleAndAdd(&P, primen, EC, pd, &d, returnQ);
+
             //gmp_printf("post\n\trx %Zd, ry %Zd, rz %Zd\n", returnQ->X, returnQ->Y, returnQ->Z);
             //gmp_printf("postp\n\tx = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
             if(mpz_cmp_ui(returnQ->X, 0) == 0)
@@ -759,37 +791,40 @@ void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct pr
     //generate random x, y, a in [0, n-1]
 
     mpz_urandomm(Q->X, state, pd.n);
-    //gmp_printf("%Zd\n", Q->X);
+    gmp_printf("%Zd\n", Q->X);
     mpz_urandomm(Q->Y, state, pd.n);
-    //gmp_printf("%Zd\n", Q->Y);
-    mpz_urandomm(EC->a, state, pd.n);
-    //gmp_printf("%Zd\n", EC->a);
+
+    mpz_set_ui(EC->a, 1);
+    gmp_printf("%Zd\n", Q->Y);
+    //mpz_urandomm(EC->a, state, pd.n);       //posso sostituire per avere un A = 1
+    gmp_printf("%Zd\n", EC->a);
     //the curve is determined by these values
 
     //sleep(2);
     mpz_t squareY, cubeX, aX;
     mpz_init(squareY);
     mpz_init(cubeX);
-    mpz_init(aX);
+    //mpz_init(aX);
     mpz_pow_ui(squareY, Q->Y, 2);
     mpz_pow_ui(cubeX, Q->X, 3);
-    mpz_mul(aX, Q->X, EC->a);
+    //mpz_mul(aX, Q->X, EC->a);
 
 
     mpz_t temp;
     mpz_init(temp);
     mpz_sub(temp, squareY, cubeX);
-    mpz_sub(EC->b, temp, aX);
-    mpz_mod(EC->b, EC->b, pd.n);
+    mpz_sub(EC->b, temp, Q->X);
+    //mpz_mod(EC->b, EC->b, pd.n);
 
-    mp_bitcnt_t size = mpz_size(pd.n);
-    mpz_realloc2(EC->b, size);
+    //mp_bitcnt_t size = mpz_size(pd.n);
+    //mpz_realloc2(EC->b, size);
 
     mpz_clear(squareY);
     mpz_clear(cubeX);
-    mpz_clear(aX);
+    //mpz_clear(aX);
     mpz_clear(temp);
-    //gmp_printf("%Zd\n", EC->b);
+    gmp_printf("b = %Zd\n", EC->b);
+    gmp_printf("a = %Zd\n", EC->a);
 
 }
 

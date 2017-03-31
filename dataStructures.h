@@ -65,6 +65,8 @@ struct ECpoint ECmultiplyMontgomery(struct ECpoint Q, mpz_t p);
 void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint *res);
 void sub2(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);
 void doubleec2(struct ECpoint * P, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD *d, struct ECpoint *res);
+struct ECpoint doubleAndAdd(struct ECpoint * P, mpz_t p,  struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);
+int checkIfCurve(struct ECpoint P, struct weirstrassEC EC);
 
 
 #endif //ECM_DATASTRUCTURES_H

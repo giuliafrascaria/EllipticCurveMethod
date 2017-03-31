@@ -49,6 +49,150 @@ struct ECpoint ECmultiplyMontgomery(struct ECpoint Q, mpz_t p)
 }
 */
 
+
+
+struct ECpoint doubleAndAdd(struct ECpoint * P, mpz_t p,  struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res)
+{
+    //usare l'espansione binaria di p
+
+    if(mpz_cmp_ui(P->X, 0) == 0)
+    {
+        printf("point to infinity doubleandAdd\n\n");
+        return *P;
+    }
+
+    char * binaryp = malloc(sizeof(*p));
+    //char * binaryP = mpz_get_str(binaryP, 2, p);
+    binaryp = mpz_get_str(binaryp, 2, p);
+
+    mpz_t binP;
+    mpz_init(binP);
+
+    //if(mpz_set_str(binP, binaryP, 2) != 0 )
+    if(mpz_set_str(binP, binaryp, 2) != 0 )
+    {
+        printf("failed to convert\n");
+        exit(EXIT_FAILURE);
+    }
+
+    sleep(1);
+
+    struct ECpoint Q, R, res1, res2;
+    mpz_init(Q.X);
+    mpz_init(Q.Y);
+    mpz_init(Q.Z);
+
+    mpz_init(R.X);
+    mpz_init(R.Y);
+    mpz_init(R.Z);
+
+    mpz_init(res1.X);
+    mpz_init(res1.Y);
+    mpz_init(res1.Z);
+
+    mpz_init(res2.X);
+    mpz_init(res2.Y);
+    mpz_init(res2.Z);
+
+    mpz_set(Q.X, P->X); //Q = P0
+    mpz_set(Q.Y, P->Y);
+    mpz_set(Q.Z, P->Z);
+
+    doubleec(P, EC, pd, d, &R); //R = 2P
+    checkIfCurve(R, EC);
+
+
+    ssize_t size = mpz_sizeinbase(binP, 2);
+
+    mp_bitcnt_t j = (mp_bitcnt_t) size-2;
+    long index = j;
+
+    while(index >= 0 && (d->flag == 0))
+    {
+
+        int pj;
+        pj = mpz_tstbit(binP, j);
+
+        if(pj == 1)
+        {
+            add2(&R, &Q, EC, pd, d, &res1);    //Q = Q + R
+            doubleec(&R, EC, pd, d, &res2) ;     // R = 2R
+            printf("bla\n");
+        }
+        else
+        {
+            doubleec(&Q, EC, pd, d, &res1);      //Q = 2Q
+            add2(&Q, &R, EC, pd, d, &res2);    //R = Q + R
+            printf("bla2\n");
+        }
+        sleep(1);
+
+        mpz_set(Q.X, res1.X);
+        mpz_set(Q.Y, res1.Y);
+        mpz_set(Q.Z, res1.Z);
+
+        mpz_set(R.X, res2.X);
+        mpz_set(R.Y, res2.Y);
+        mpz_set(R.Z, res2.Z);
+
+        j = j-1;
+        index = index-1;
+
+        if(mpz_cmp_ui(res1.X, 0) == 0)
+        {
+            /*if(mpz_cmp_ui(res1.Y, 1) == 0)
+            {
+                if(mpz_cmp_ui(res1.Z, 0) == 0)
+                {
+                    //printf("point to infinity for EZn, bad luck check 1\n");
+                    //printf("ritorno 1\n");
+                    return;
+                }
+            }*/
+            return res1;
+        }
+
+        if(mpz_cmp_ui(res2.X, 0) == 0)
+        {
+            /*if(mpz_cmp_ui(res2.Y, 1) == 0)
+            {
+                if(mpz_cmp_ui(res2.Z, 0) == 0)
+                {
+                    //printf("point to infinity for EZn, bad luck check 1\n");
+                    //printf("ritorno 1\n");
+                    return;
+                }
+            }*/
+            return res2;
+        }
+
+
+    }
+
+    mpz_set(res->X, Q.X);
+    mpz_set(res->Y, Q.Y);
+    mpz_set(res->Z, Q.Z);
+
+    mpz_clear(res1.X);
+    mpz_clear(res1.Y);
+    mpz_clear(res1.Z);
+
+    mpz_clear(res2.X);
+    mpz_clear(res2.Y);
+    mpz_clear(res2.Z);
+
+    /*mpz_clear(Q.X);
+    mpz_clear(Q.Y);
+    mpz_clear(Q.Z);*/
+
+    mpz_clear(R.X);
+    mpz_clear(R.Y);
+    mpz_clear(R.Z);
+
+    return Q;
+
+}
+
 struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res)
 {
     //initialize
@@ -57,6 +201,8 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
     //sleep(1);
 
     //gmp_printf("considero il primo %Zd\n", p);
+
+
     if(mpz_cmp_ui(p, 0) == 0)
     {
         //printf("sono qui\n");
@@ -130,6 +276,9 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
             //res = doubleec(res, EC, pd, d, res);
 
             doubleec2(Q, EC, pd, d, &result);
+            checkIfCurve(result, EC);
+
+            sleep(1);
 
             /*gmp_printf("resresresresQx %Zd\n", result.X);
             gmp_printf("resresresresy %Zd\n\n", result.Y);*/
@@ -164,6 +313,9 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
                 //printf("Adding P and Q\n");
                 //res = add(res, Q, EC, pd, d, res);
                 add2(&term1, Q, EC, pd, d, &result);
+                checkIfCurve(result, EC);
+
+                sleep(1);
 
                 //free(res);
             }
@@ -177,7 +329,9 @@ Change the space allocated for x to n bits. The value in x is preserved if it fi
                 //printf("subtracting p and q\n");
                 //res = sub(res, Q, EC, pd, d, res);
                 sub2(&term1, Q, EC, pd, d, &result);
+                checkIfCurve(result, EC);
 
+                sleep(1);
                 //free(res);
             }
 
@@ -647,3 +801,34 @@ void montgomeryLadder()
 }
 
 
+int checkIfCurve(struct ECpoint P, struct weirstrassEC EC)
+{
+    //y^2 = x^3 + ax + b
+    //verifico l'uguaglianza
+
+    mpz_t squarey, cubex, ax, sum;
+    mpz_init(squarey);
+    mpz_init(cubex);
+    //mpz_init(ax);
+    mpz_init(sum);
+
+    mpz_pow_ui(squarey, P.Y, 2);
+    mpz_pow_ui(cubex, P.X, 3);
+    //mpz_mul(ax, P.X, EC.a);
+
+    mpz_add(sum, cubex, P.X);
+    mpz_add(sum, sum, EC.b);
+
+    if(mpz_cmp(squarey, sum) == 0)
+    {
+        printf("verified\n");
+        return 1;
+    }
+    else
+    {
+        printf("failed\n");
+        return 0;
+    }
+
+
+}

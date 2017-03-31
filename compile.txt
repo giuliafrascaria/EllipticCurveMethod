@@ -32,7 +32,31 @@ cc -I/root/EllipticCurveMethod/gc/include dataStructures.h ECarithmetics.c  main
 todo:
 correggere lo step 2 con le nuove chiamate di funzione
 
-----------------------------------------------------GDB-------------------------------------------------
+----------------------------------------------------DEBUG_GDB-------------------------------------------------
 gcc -g *.c *.h
 gdb ./a.out
 (gdb) r arg1 arh2 arg3
+
+
+
+
+
+
+
+
+----------------------------------------------
+
+447221147909671
+88888877777777777777777111
+8181877711171777
+972727791616820625793333777777777
+97272779161682062571111111
+447221147909671
+
+----------------------------------------------
+
+
+
+
+stampare ordine delle curve ellittiche in un caso controllato
+isolare fase 1 e fase 2
