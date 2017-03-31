@@ -31,7 +31,7 @@ pthread_mutex_t stage2mtx[8];
 int main(int argc, char ** argv)
 {
 
-    struct weirstrassEC testEC;
+    /*struct weirstrassEC testEC;
     struct problemData pdt;
     mpz_init(pdt.n);
     mpz_init(testEC.b);
@@ -64,7 +64,7 @@ int main(int argc, char ** argv)
 
     //gmp_printf("startx = %Zd\nstarty = %Zd\nstartz = %Zd\n", P.X, P.Y, P.Z);
 
-    Q = doubleAndAdd2(&P, two, testEC, pd, &den);
+    Q = doubleAndAdd2(&P, two, testEC, pd, &den);*/
 
 
     //sleep(5);
@@ -600,6 +600,7 @@ value if op1 < op2.
             *returnQ = ECmultiplyTraditional(&P, primen, EC, pd, &d, returnQ);
 
             //doubleAndAdd(&P, primen, EC, pd, &d, returnQ);
+            //*returnQ = doubleAndAdd2(&P, primen, EC, pd, &d);
 
             //gmp_printf("post\n\trx %Zd, ry %Zd, rz %Zd\n", returnQ->X, returnQ->Y, returnQ->Z);
             //gmp_printf("postp\n\tx = %Zd , y= %Zd , z= %Zd \n", P.X, P.Y, P.Z);
