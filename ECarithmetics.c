@@ -253,8 +253,8 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
                 mpz_set(term1.X, result.X);
                 mpz_set(term1.Y, result.Y);
                 mpz_set(term1.Z, result.Z);
-                //add2(&term1, Q, EC, pd, d, &result);
-                result = add3(&term1, Q, EC, pd, d);
+                add2(&term1, Q, EC, pd, d, &result);
+                //result = add3(&term1, Q, EC, pd, d);
                 checkIfCurve(result, EC, pd);
             }
             else if(mi == '0' && ni == '1')
@@ -370,8 +370,8 @@ struct ECpoint ECmultiplyTraditional2(struct ECpoint * Q, mpz_t *p, struct weirs
                 mpz_set(term1.X, result.X);
                 mpz_set(term1.Y, result.Y);
                 mpz_set(term1.Z, result.Z);
-                //add2(&term1, Q, EC, pd, d, &result);
-                result = add3(&term1, Q, EC, pd, d);
+                add2(&term1, Q, EC, pd, d, &result);
+                //result = add3(&term1, Q, EC, pd, d);
                 checkIfCurve(result, EC, pd);
             }
             else if(mi == '0' && ni == '1')
@@ -841,10 +841,7 @@ void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct 
 struct ECpoint add3(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d)
 {
 
-    struct ECpoint result;
-    mpz_init(result.X);
-    mpz_init(result.Y);
-    mpz_init(result.Z);
+
     /*gmp_printf("Px %Zd\n", P->X);
     gmp_printf("Py %Zd\n\n", P->Y);
     gmp_printf("Qx %Zd\n", Q->X);
@@ -880,6 +877,10 @@ struct ECpoint add3(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC E
         return Pr;
     }
     mpz_t m;
+    struct ECpoint result;
+    mpz_init(result.X);
+    mpz_init(result.Y);
+    mpz_init(result.Z);
 
     if(mpz_cmp(P->X, Q->X) == 0)
     {

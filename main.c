@@ -150,13 +150,13 @@ void * loop(void * k)
 
 
         ww = pow(w, w);
-        iterations = lround(ww);
-        //iterations = 1;
+        //iterations = lround(ww);
+        iterations = 50;
         printf("process iterating for %ld times\n", iterations);
 
 
         //gmp_printf("BBest = %Zd\n\n", pd.stageOneB);
-        for(i = 0; i < iterations; i++)       //repeat w^w times
+        for(i = 0; i < iterations/8; i++)       //repeat w^w times
         {
             success = classicalECM(pd, &factor, state, cont, primeLog);
             if(success == 1)
@@ -269,7 +269,7 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
     else
     {
         //prime power multipliers
-        //printf("starting step 1 in seconds\n");
+        printf("starting step 1\n");
         //sleep(2);
         struct ECpoint result;
         mpz_init(result.X);
@@ -285,7 +285,7 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
         }
         else if(success == 0)
         {
-            //printf("should try stage 2\n");
+            printf("TRYING stage 2\n");
             //sleep(1);
 
             //if(digits > maxdigits)
@@ -294,9 +294,10 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
                 if(pthread_mutex_trylock(&(stage2mtx[k])) == 0)
                 //if(pthread_mutex_lock(&(stage2mtx[0])) == 0)
                 {
+                    printf("sono qui\n");
                     //printf("thread %ld locked %d mtxfor %d digits \n", pthread_self(), k, digits);
 
-                  //  maxdigits = digits;
+                    maxdigits = digits;
                     //success = stageTwo(EC, result, pd);
                     success = efficientStageTwo(EC, result, pd);
                     if(success)
@@ -311,6 +312,7 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
                     return success;
                 }
             //}
+            //return 0;
 
         }
         else
@@ -1301,8 +1303,8 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     {
         if(mpz_cmp(q, pd.n) < 0)
         {
-            printf("-------------------------------------------success in stage two----------------------------------\n");
-            gmp_printf("\t%Zd\n---------------------------------------------------------------------------\n", q);
+            printf("--------------------------------------------------------------------\n\n");
+            gmp_printf("\tfound factor %Zd\n\n------------------------------------------------------------------\n", q);
             //return q
             return 1;
         }
