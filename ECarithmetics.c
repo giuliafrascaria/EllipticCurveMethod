@@ -505,8 +505,6 @@ void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct 
     gmp_printf("Qx %Zd\n", Q->X);
     gmp_printf("Qy %Zd\n\n", Q->Y);*/
 
-
-    //printf("heila\n");
     if(mpz_cmp_ui(P->Z, 0) == 0)
     {
         printf("null P\n");
@@ -662,6 +660,231 @@ void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct 
     mpz_sub(x3, partial, Q->X);
 
    // gmp_printf("X3 = %Zd\nPx = %Zd\n", x3, P->X);
+
+
+
+    mpz_clear(partial);
+    mpz_clear(squarem);
+
+    //mpz_mod(res->X, x3, pd.n);
+    mpz_set(res->X, x3);
+    mpz_mod(res->X, res->X, pd.n);
+
+    mpz_clear(x3);
+
+
+    //gmp_printf("resX after mod = %Zd\nPx = %Zd\n", res->X, P->X);
+
+    //calculate y3
+    //m(x1 - x3) - y1
+    //printf("calculating y3\n");
+    mpz_t partial2, partial3;
+    mpz_init(partial2);
+    mpz_init(partial3);
+
+    //mpz_sub(partial2, P->X, P->X);
+    //mpz_mul(P->Y, m, partial2);
+
+    //mpz_sub(partial2, res->X, P->X);
+    mpz_sub(partial2,  P->X, res->X);
+
+    mpz_mul(partial3, m, partial2);
+
+    mpz_sub(res->Y, partial3, P->Y);
+
+
+    //gmp_printf("partial2 = %Zd\n", partial2);
+    //mpz_mul(res->Y, m, partial2);
+
+
+    mpz_clear(partial2);
+    mpz_clear(partial3);
+    mpz_clear(m);
+
+    //mpz_mod(P->Y, P->Y, pd.n);
+    mpz_mod(res->Y, res->Y, pd.n);
+
+    /*mp_bitcnt_t size = mpz_size(pd.n);
+    mpz_realloc2(PandQ->Y, size);*/
+
+    //mpz_set_ui(P->Z, 1);
+    //mpz_set(P->X, res->X);
+    //mpz_set(P->Y, res->Y);
+    mpz_set_ui(res->Z, 1);
+
+    //free(P);
+    //sleep(1);
+    return;
+    //return (x3, y3)
+}
+
+struct ECpoint add3(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d)
+{
+
+    /*gmp_printf("Px %Zd\n", P->X);
+    gmp_printf("Py %Zd\n\n", P->Y);
+    gmp_printf("Qx %Zd\n", Q->X);
+    gmp_printf("Qy %Zd\n\n", Q->Y);*/
+
+    if(mpz_cmp_ui(P->Z, 0) == 0)
+    {
+        struct ECpoint Qr;
+        mpz_init(Qr.X);
+        mpz_init(Qr.Y);
+        mpz_init(Qr.Z);
+
+        mpz_set(Qr.X, Q->X);
+        mpz_set(Qr.Y, Q->Y);
+        mpz_set(Qr.Z, Q->Z);
+        printf("Q\n");
+
+        return Qr;
+    }
+
+    if(mpz_cmp_ui(Q->Z, 0) == 0)
+    {
+        struct ECpoint Pr;
+        mpz_init(Pr.X);
+        mpz_init(Pr.Y);
+        mpz_init(Pr.Z);
+
+        mpz_set(Pr.X, P->X);
+        mpz_set(Pr.Y, P->Y);
+        mpz_set(Pr.Z, P->Z);
+        printf("P\n");
+
+        return Pr;
+    }
+    mpz_t m;
+
+    if(mpz_cmp(P->X, Q->X) == 0)
+    {
+        //printf("tangente verticale\n");
+
+
+        //m=(3x1^2 + a)/2y1
+
+        /*gmp_printf("resx %Zd\n", res->X);
+        gmp_printf("resy %Zd\n\n", res->Y);*/
+
+        mpz_t sumOfY;
+        mpz_init(sumOfY);
+
+        mpz_add(sumOfY, P->Y, Q->Y);
+        //gmp_printf("sumofY = %Zd\n\n", sumOfY);
+        if(mpz_cmp_ui(sumOfY, 0) == 0)
+        {
+            //infinity
+            printf("point to infinity add\n");
+            //sleep(1);
+            /*struct ECpoint * infinity = malloc(sizeof(struct ECpoint));
+            mpz_init(infinity->X);
+            mpz_init(infinity->Y);
+            mpz_init(infinity->Z);
+
+            mpz_set_ui(infinity->X, 0);
+            mpz_set_ui(infinity->Y, 1);
+            mpz_set_ui(infinity->Z, 0);
+
+            return infinity;*/
+            mpz_set_ui(res->X, 0);
+            mpz_set_ui(res->Y, 1);
+            mpz_set_ui(res->Z, 0);
+
+            mpz_set_ui(P->X, 0);
+            mpz_set_ui(P->Y, 1);
+            mpz_set_ui(P->Z, 0);
+
+            return;
+        }
+
+        mpz_clear(sumOfY);
+        //calculate m
+        //printf("calculating m\n");
+        mpz_t squareX, threeSquareX, firstterm, doubley, invertY;
+        mpz_init(squareX);
+        mpz_init(threeSquareX);
+        mpz_init(firstterm);
+        mpz_init(doubley);
+        mpz_init(invertY);
+        mpz_init(m);
+
+        mpz_pow_ui(squareX, P->X, 2);
+        mpz_mul_ui(threeSquareX, squareX, 3);
+        mpz_add(firstterm, threeSquareX, EC.a);
+
+        mpz_mul_ui(doubley, P->Y, 2);
+        int result;
+        result = mpz_invert(invertY, doubley, pd.n);     //if the return value is zero the invert is not defined
+        if(result == 0)
+        {
+            //non invertible d
+            printf("found non invertible den add2\n");
+            d->flag = 1;
+            mpz_set(d->d, doubley);
+            //I should break the cycle
+            return;
+        }
+
+        mpz_mul(m, firstterm, invertY);
+
+        //gmp_printf("valore di m %Zd\n", m);
+
+        mpz_clear(firstterm);
+        mpz_clear(invertY);
+        mpz_clear(doubley);
+        mpz_clear(threeSquareX);
+        mpz_clear(squareX);
+    }
+    else
+    {
+        //calculate m
+        //printf("tangente non verticale\n");
+
+        mpz_t firstterm, secondterm, invertsecond;
+        mpz_init(firstterm);
+        mpz_init(secondterm);
+        mpz_init(invertsecond);
+        mpz_init(m);
+
+        mpz_sub(firstterm, Q->Y, P->Y);
+        mpz_sub(secondterm, Q->X, P->X);
+        int result;
+        result = mpz_invert(invertsecond, secondterm, pd.n);
+        if(result == 0)
+        {
+            //non invertible d
+            printf("noninvertible den 1\n");
+            d->flag = 1;
+            mpz_set(d->d, secondterm);
+
+            //I should break the cycle
+            return;
+        }
+        mpz_mul(m, firstterm, invertsecond);
+        mpz_clear(firstterm);
+        mpz_clear(invertsecond);
+        mpz_clear(secondterm);
+    }
+    //printf("calculating x3\n");
+    //calculate x3
+    //mp_bitcnt_t size = mpz_size(pd.n);
+    //mpz_realloc2(PandQ->Y, size);
+    //struct ECpoint * PandQ = malloc(sizeof(struct ECpoint));        //unica malloc che rimane, unica malloc che riempie
+    //struct ECpoint * PandQ = GC_MALLOC(sizeof(struct ECpoint));
+
+
+    mpz_t squarem, partial, x3;
+    mpz_init(squarem);
+    mpz_init(partial);
+    mpz_init(x3);
+
+    mpz_pow_ui(squarem, m, 2);
+    mpz_sub(partial, squarem, P->X);
+    //mpz_sub(P->X, partial, Q->X);
+    mpz_sub(x3, partial, Q->X);
+
+    // gmp_printf("X3 = %Zd\nPx = %Zd\n", x3, P->X);
 
 
 

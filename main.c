@@ -1172,7 +1172,7 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
 
     mpz_set_ui(den, 1);
 
-    struct ECpoint S, R, jQ0;
+    struct ECpoint S, R, jQ0, result;
     mpz_init(S.X);
     mpz_init(S.Y);
     mpz_init(S.Z);
@@ -1185,6 +1185,10 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     mpz_init(jQ0.Y);
     mpz_init(jQ0.Z);
 
+    mpz_init(result.X);
+    mpz_init(result.Y);
+    mpz_init(result.Z);
+
 
     //printf("qui\n\n");
 
@@ -1193,8 +1197,8 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     //R = Mmin*S
     R = ECmultiplyTraditional(&S, Mmin, EC, pd, &d, &R);
 
-    checkIfCurve(S, EC, pd);
-    checkIfCurve(R, EC, pd);
+//    checkIfCurve(S, EC, pd);
+//    checkIfCurve(R, EC, pd);
     //struct JsElem * el;
 
     volatile struct JsElem * listEl;
@@ -1243,9 +1247,14 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
             listEl = listEl->next;
 
         }
-        //printf("sasfasd\n");
+//        printf("sasfasd\n");
         //sleep(1);
-        add2(&R, &P, EC, pd, &d, &R);
+        add2(&R, &P, EC, pd, &d, &result);
+
+        mpz_set(R.X, result.X);
+        mpz_set(R.Y, result.Y);
+        mpz_set(R.Z, result.Z);
+//        printf("naaaazapegna\n\n");
         //while(scorro lista collegata di Js)
             //if(primetable[m][js] == 1)
                 //faccio cose
