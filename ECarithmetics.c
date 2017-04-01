@@ -161,6 +161,7 @@ struct ECpoint doubleAndAdd(struct ECpoint * P, mpz_t p,  struct weirstrassEC EC
 
 struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res)
 {
+
     struct ECpoint P;
     mpz_init(P.X);
     mpz_init(P.Y);
@@ -252,7 +253,126 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
                 mpz_set(term1.X, result.X);
                 mpz_set(term1.Y, result.Y);
                 mpz_set(term1.Z, result.Z);
-                add2(&term1, Q, EC, pd, d, &result);
+                //add2(&term1, Q, EC, pd, d, &result);
+                result = add3(&term1, Q, EC, pd, d);
+                checkIfCurve(result, EC, pd);
+            }
+            else if(mi == '0' && ni == '1')
+            {
+//                printf("mi = %c , ni = %c\n", mi, ni);
+                mpz_set(term1.X, result.X);
+                mpz_set(term1.Y, result.Y);
+                mpz_set(term1.Z, result.Z);
+                sub2(&term1, Q, EC, pd, d, &result);
+            }
+            mpz_set(P.X, result.X);
+            mpz_set(P.Y, result.Y);
+            mpz_set(P.Z, result.Z);
+        }
+
+        return result;
+    }
+}
+
+struct ECpoint ECmultiplyTraditional2(struct ECpoint * Q, mpz_t *p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res)
+{
+
+    //gmp_printf("p = %Zd\n", *p);
+
+    struct ECpoint P;
+    mpz_init(P.X);
+    mpz_init(P.Y);
+    mpz_init(P.Z);
+
+    mpz_set(P.X, Q->X);
+    mpz_set(P.Y, Q->Y);
+    mpz_set(P.Z, Q->Z);
+
+    if(mpz_cmp_ui(*p, 0) == 0)
+    {
+
+        struct ECpoint infinity;
+        mpz_init(infinity.X);
+        mpz_init(infinity.Y);
+        mpz_init(infinity.Z);
+
+        mpz_set_ui(infinity.X, 0);
+        mpz_set_ui(infinity.Y, 1);
+        mpz_set_ui(infinity.Z, 0);
+        printf("infinity\n");
+
+        return infinity;
+    }
+    else
+    {
+
+        mpz_t n;
+        mpz_init(n);
+        mpz_set(n, *p); //!!!!!!!!
+
+        mpz_t m;
+        mpz_init(m);
+        mpz_mul_ui(m, n, 3);
+        size_t binarySizeM = mpz_sizeinbase(m, 2);
+
+        char * binaryn = NULL;
+        binaryn = mpz_get_str(binaryn, 2, n);
+        char * binarym = NULL;
+        binarym = mpz_get_str(binarym, 2, m);
+
+//        printf("M : %d\n",(int) binarySizeM);
+//        printf("N : %d\n",(int) mpz_sizeinbase(n, 2));
+//        for(int i = 0; i < mpz_sizeinbase(p, 2); i++){
+/*
+            printf("binaryn = %s\n", binaryn);
+        }
+*/
+
+
+        ssize_t size = mpz_sizeinbase(m, 2);
+
+        mpz_realloc2(n, (mp_bitcnt_t) size);
+
+//        mp_bitcnt_t j = (mp_bitcnt_t) size-2;
+
+
+        struct ECpoint term1, result;
+        mpz_init(term1.X);
+        mpz_init(term1.Y);
+        mpz_init(term1.Z);
+
+
+        mpz_init(result.X);
+        mpz_init(result.Y);
+        mpz_init(result.Z);
+
+        for(int i = (int) (binarySizeM - 2); i >= 1; i--){
+
+            doubleec2(&P, EC, pd, d, &result);
+            checkIfCurve(result, EC, pd);
+            if(mpz_cmp_ui(result.X, 0) == 0)
+            {
+                if(mpz_cmp_ui(result.Y, 1) == 0)
+                {
+                    if(mpz_cmp_ui(result.Z, 0) == 0)
+                    {
+                        printf("point to infinity for EZn, bad luck check 2\n");
+                        //printf("ritorno 2\n");
+                        return result;
+                    }
+                }
+            }
+            char ni = binaryn[i];
+            char mi = binarym[i];
+            if(mi == '1' && ni == '0')
+            {
+//                printf("mi = %c , ni = %c\n", mi, ni);
+                mpz_set(term1.X, result.X);
+                mpz_set(term1.Y, result.Y);
+                mpz_set(term1.Z, result.Z);
+                //add2(&term1, Q, EC, pd, d, &result);
+                result = add3(&term1, Q, EC, pd, d);
+                checkIfCurve(result, EC, pd);
             }
             else if(mi == '0' && ni == '1')
             {
@@ -721,6 +841,10 @@ void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct 
 struct ECpoint add3(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d)
 {
 
+    struct ECpoint result;
+    mpz_init(result.X);
+    mpz_init(result.Y);
+    mpz_init(result.Z);
     /*gmp_printf("Px %Zd\n", P->X);
     gmp_printf("Py %Zd\n\n", P->Y);
     gmp_printf("Qx %Zd\n", Q->X);
@@ -787,15 +911,18 @@ struct ECpoint add3(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC E
             mpz_set_ui(infinity->Z, 0);
 
             return infinity;*/
-            mpz_set_ui(res->X, 0);
-            mpz_set_ui(res->Y, 1);
-            mpz_set_ui(res->Z, 0);
 
-            mpz_set_ui(P->X, 0);
+
+
+            mpz_set_ui(result.X, 0);
+            mpz_set_ui(result.Y, 1);
+            mpz_set_ui(result.Z, 0);
+
+            /*mpz_set_ui(P->X, 0);
             mpz_set_ui(P->Y, 1);
-            mpz_set_ui(P->Z, 0);
+            mpz_set_ui(P->Z, 0);*/
 
-            return;
+            return result;
         }
 
         mpz_clear(sumOfY);
@@ -814,16 +941,16 @@ struct ECpoint add3(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC E
         mpz_add(firstterm, threeSquareX, EC.a);
 
         mpz_mul_ui(doubley, P->Y, 2);
-        int result;
-        result = mpz_invert(invertY, doubley, pd.n);     //if the return value is zero the invert is not defined
-        if(result == 0)
+        int resultval;
+        resultval = mpz_invert(invertY, doubley, pd.n);     //if the return value is zero the invert is not defined
+        if(resultval == 0)
         {
             //non invertible d
             printf("found non invertible den add2\n");
             d->flag = 1;
             mpz_set(d->d, doubley);
             //I should break the cycle
-            return;
+            return result;
         }
 
         mpz_mul(m, firstterm, invertY);
@@ -849,9 +976,9 @@ struct ECpoint add3(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC E
 
         mpz_sub(firstterm, Q->Y, P->Y);
         mpz_sub(secondterm, Q->X, P->X);
-        int result;
-        result = mpz_invert(invertsecond, secondterm, pd.n);
-        if(result == 0)
+        int resultval;
+        resultval = mpz_invert(invertsecond, secondterm, pd.n);
+        if(resultval == 0)
         {
             //non invertible d
             printf("noninvertible den 1\n");
@@ -859,7 +986,7 @@ struct ECpoint add3(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC E
             mpz_set(d->d, secondterm);
 
             //I should break the cycle
-            return;
+            return result;
         }
         mpz_mul(m, firstterm, invertsecond);
         mpz_clear(firstterm);
@@ -892,8 +1019,8 @@ struct ECpoint add3(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC E
     mpz_clear(squarem);
 
     //mpz_mod(res->X, x3, pd.n);
-    mpz_set(res->X, x3);
-    mpz_mod(res->X, res->X, pd.n);
+    mpz_set(result.X, x3);
+    mpz_mod(result.X, result.X, pd.n);
 
     mpz_clear(x3);
 
@@ -911,11 +1038,11 @@ struct ECpoint add3(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC E
     //mpz_mul(P->Y, m, partial2);
 
     //mpz_sub(partial2, res->X, P->X);
-    mpz_sub(partial2,  P->X, res->X);
+    mpz_sub(partial2,  P->X, result.X);
 
     mpz_mul(partial3, m, partial2);
 
-    mpz_sub(res->Y, partial3, P->Y);
+    mpz_sub(result.Y, partial3, P->Y);
 
 
     //gmp_printf("partial2 = %Zd\n", partial2);
@@ -927,7 +1054,7 @@ struct ECpoint add3(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC E
     mpz_clear(m);
 
     //mpz_mod(P->Y, P->Y, pd.n);
-    mpz_mod(res->Y, res->Y, pd.n);
+    mpz_mod(result.Y, result.Y, pd.n);
 
     /*mp_bitcnt_t size = mpz_size(pd.n);
     mpz_realloc2(PandQ->Y, size);*/
@@ -935,11 +1062,11 @@ struct ECpoint add3(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC E
     //mpz_set_ui(P->Z, 1);
     //mpz_set(P->X, res->X);
     //mpz_set(P->Y, res->Y);
-    mpz_set_ui(res->Z, 1);
+    mpz_set_ui(result.Z, 1);
 
     //free(P);
     //sleep(1);
-    return;
+    return result;
     //return (x3, y3)
 }
 

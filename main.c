@@ -151,7 +151,7 @@ void * loop(void * k)
 
         ww = pow(w, w);
         iterations = lround(ww);
-        //iterations = 75;
+        //iterations = 1;
         printf("process iterating for %ld times\n", iterations);
 
 
@@ -285,32 +285,33 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
         }
         else if(success == 0)
         {
-            printf("should try stage 2\n");
+            //printf("should try stage 2\n");
             //sleep(1);
 
-            if(digits > maxdigits || 1==1)
-            {
+            //if(digits > maxdigits)
+            //{
 
-//                if(pthread_mutex_trylock(&(stage2mtx[k])) == 0)
-                if(pthread_mutex_lock(&(stage2mtx[0])) == 0)
+                if(pthread_mutex_trylock(&(stage2mtx[k])) == 0)
+                //if(pthread_mutex_lock(&(stage2mtx[0])) == 0)
                 {
                     //printf("thread %ld locked %d mtxfor %d digits \n", pthread_self(), k, digits);
 
-                    maxdigits = digits;
+                  //  maxdigits = digits;
                     //success = stageTwo(EC, result, pd);
                     success = efficientStageTwo(EC, result, pd);
                     if(success)
                     {
                         printf("successful stage two\n");
                     }
-                    printf("thread %ld in stage two for %d digits\n", pthread_self(),digits/3);
-                    //sleep(1);
-//                    pthread_mutex_unlock(&(stage2mtx[k]));
-                    pthread_mutex_unlock(&(stage2mtx[0]));
+                    //printf("thread %ld in stage two for %d digits\n", pthread_self(),digits/3);
+                    //sleep(3);
+                    pthread_mutex_unlock(&(stage2mtx[k]));
+                    //pthread_mutex_unlock(&(stage2mtx[0]));
                     //printf("thread %ld leaving stage two for ln = %d\n", pthread_self(),digits);
                     return success;
                 }
-            }
+            //}
+
         }
         else
         {
@@ -944,7 +945,7 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     gmp_printf("Qz = %Zd\n", Q.Z);*/
 
 
-    printf("precomputation for stage two\n");
+    //printf("precomputation for stage two\n");
 
     struct JsElem head;
 
@@ -1159,7 +1160,7 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     }
 
     //--------------------------MAIN COMPUTATION-----------------------------------
-    printf("main computation for stage two\n");
+    //printf("main computation for stage two\n");
 
     //d ← 1, P ← DQ0, R ← MminQ
     mpz_t den, q, mIndex, partial1, partial2, partial3;
@@ -1193,9 +1194,14 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     //printf("qui\n\n");
 
     //S = DQ0
-    S = ECmultiplyTraditional(&Q, D, EC, pd, &d, &S);
+    //gmp_printf("moltiplico Q0 per D = %Zd\n", D);
+    S = ECmultiplyTraditional2(&Q, &D, EC, pd, &d, &S);
+    //printf("calcolato S\n");
     //R = Mmin*S
-    R = ECmultiplyTraditional(&S, Mmin, EC, pd, &d, &R);
+    mpz_set_d(Mmin, dMmin);
+    //gmp_printf("moltiplico S per Mmin = %Zd\n", Mmin);
+    R = ECmultiplyTraditional2(&S, &Mmin, EC, pd, &d, &R);
+    //printf("calcolato R\n");
 
 //    checkIfCurve(S, EC, pd);
 //    checkIfCurve(R, EC, pd);
@@ -1249,7 +1255,10 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
         }
 //        printf("sasfasd\n");
         //sleep(1);
-        add2(&R, &P, EC, pd, &d, &result);
+        //add2(&R, &P, EC, pd, &d, &result);
+        result = add3(&R, &P, EC, pd, &d);
+
+        checkIfCurve(result, EC, pd);
 
         mpz_set(R.X, result.X);
         mpz_set(R.Y, result.Y);
@@ -1268,7 +1277,7 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     mpz_gcd(q, den, pd.n);
 
     //gmp_printf("ecco a voi d = %Zd\n", den);
-    gmp_printf("ecco a voi q = %Zd\n", q);
+    //gmp_printf("ecco a voi q = %Zd\n", q);
     //sleep(1);
 
     mpz_clear(R.X);

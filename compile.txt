@@ -64,6 +64,10 @@ gdb ./a.out
 ------------------------------------------------------------------------------------------------------------------
 
 
+todo
+*impostare bene il numero di iterazioni per ogni B
+*risolvere la fase 2
+*magari ritornare alla scelta efficiente della curva con ordine divisibile per 16
 
 
 
