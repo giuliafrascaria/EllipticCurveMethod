@@ -347,7 +347,7 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
 //                        //printf("ritorno 2\n");
 //                        return result;
 //                    }
-//                }
+//                }cd
 //            }
 //            j = j-1;
 //        }

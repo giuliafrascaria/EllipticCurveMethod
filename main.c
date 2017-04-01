@@ -335,10 +335,10 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
         }
         else if(success == 0)
         {
-            //printf("should try stage 2\n");
+            printf("should try stage 2\n");
             //sleep(1);
 
-            if(digits > maxdigits)
+            /*if(digits > maxdigits)
             {
 
                 if(pthread_mutex_trylock(&(stage2mtx[k])) == 0)
@@ -361,7 +361,9 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
                     //printf("thread %ld leaving stage two for ln = %d\n", pthread_self(),digits);
                     return success;
                 }
-            }
+            }*/
+
+            return 0;
 
         }
         else
