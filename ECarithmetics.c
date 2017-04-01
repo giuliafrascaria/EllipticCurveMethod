@@ -17,40 +17,6 @@ struct ECpoint * sub(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC E
  * elliptic multiplication (Montgomery method)
  * */
 
-/*
-struct ECpoint ECmultiplyMontgomery(struct ECpoint Q, mpz_t p)
-{
-    //initialization
-    if(mpz_cmp_ui(p, 0) == 0)
-    {
-        struct ECpoint infinity;    //the point to infinity is recognized with the pair 0,0
-        mpz_init(infinity.X);
-        mpz_set_ui(infinity.X, 0);
-
-        mpz_init(infinity.Z);
-        mpz_set_ui(infinity.Z, 0);
-        return infinity;
-    }
-    else if(mpz_cmp_ui(p, 1) == 0)
-    {
-        return Q;
-    }
-    else if(mpz_cmp_ui(p, 2) == 0)
-    {
-        //doubleh
-        return Q;       //delete
-    }
-    //begin Montgomery adding ladder
-
-    //loop over bits
-
-    //final calculation
-
-}
-*/
-
-
-
 struct ECpoint doubleAndAdd(struct ECpoint * P, mpz_t p,  struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res)
 {
     //usare l'espansione binaria di p
@@ -301,65 +267,6 @@ struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstr
             mpz_set(P.Z, result.Z);
         }
 
-//        while(j >= 1 && (d->flag == 0))
-//        {
-//            doubleec2(Q, EC, pd, d, &result);
-//            checkIfCurve(result, EC, pd);
-//            if(mpz_cmp_ui(result.X, 0) == 0)
-//            {
-//                if(mpz_cmp_ui(result.Y, 1) == 0)
-//                {
-//                    if(mpz_cmp_ui(result.Z, 0) == 0)
-//                    {
-//
-//                        return result;
-//                    }
-//                }
-//            }
-//            int mj, nj;
-//            mj = mpz_tstbit(m, j);
-//            nj = mpz_tstbit(n, j);
-//            if((mj == 1) && (nj == 0))
-//            {
-//                mpz_set(term1.X, result.X);
-//                mpz_set(term1.Y, result.Y);
-//                mpz_set(term1.Z, result.Z);
-//                add2(&term1, Q, EC, pd, d, &result);
-//                checkIfCurve(result, EC, pd);
-//            }
-//            if((mj == 0) && (nj == 1)) {
-//                mpz_set(term1.X, result.X);
-//                mpz_set(term1.Y, result.Y);
-//                mpz_set(term1.Z, result.Z);
-//                sub2(&term1, Q, EC, pd, d, &result);
-//                checkIfCurve(result, EC, pd);
-//            }
-//            mpz_set(Q->X, result.X);
-//            mpz_set(Q->Y, result.Y);
-//            mpz_set(Q->Z, result.Z);
-//            if(mpz_cmp_ui(result.X, 0) == 0)
-//            {
-//                if(mpz_cmp_ui(result.Y, 1) == 0)
-//                {
-//                    if(mpz_cmp_ui(result.Z, 0) == 0)
-//                    {
-//                        printf("point to infinity for EZn, bad luck check 2\n");
-//                        //printf("ritorno 2\n");
-//                        return result;
-//                    }
-//                }cd
-//            }
-//            j = j-1;
-//        }
-/*
-
-        gmp_printf("risultato di %Zd per il punto\n", p);
-
-        gmp_printf("px = %Zd\npy = %Zd\npz = %Zd\n", result.X, result.Y, result.Z);
-*/
-
-        //sleep(3);
-
         return result;
     }
 }
@@ -422,204 +329,6 @@ struct ECpoint doubleAndAdd2(struct ECpoint * P, mpz_t p, struct weirstrassEC EC
     return Q;
 
 }
-
-/*
-struct ECpoint ECmultiplyTraditional(struct ECpoint * Q, mpz_t p, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res)
-{
-    //initialize
-    //printf("initializing ladder\n");
-    //gmp_printf("\n\n\nx = %Zd , y= %Zd , z= %Zd \n\n\n", Q->X, Q->Y, Q->Z);
-    //sleep(1);
-
-    //gmp_printf("considero il primo %Zd\n", p);
-
-
-    if(mpz_cmp_ui(p, 0) == 0)
-    {
-        //printf("sono qui\n");
-        //point to infinity
-        struct ECpoint infinity;
-        mpz_init(infinity.X);
-        mpz_init(infinity.Y);
-        mpz_init(infinity.Z);
-
-        mpz_set_ui(infinity.X, 0);
-        mpz_set_ui(infinity.Y, 1);
-        mpz_set_ui(infinity.Z, 0);
-        printf("infinity\n");
-
-        return infinity;
-    }
-    else
-    {
-        //printf("non sono andato all'infinito subito\n");
-        //compare bits of [3n, n]
-        //printf("starting ladder\n");
-        mpz_t n;
-        mpz_init(n);
-        mpz_set(n, pd.n);
-
-        mpz_t m;
-        mpz_init(m);
-        mpz_mul_ui(m, n, 3);
-
-        char * binarym = malloc(sizeof(*m));
-        //char * binaryP = mpz_get_str(binaryP, 2, p);
-        binarym = mpz_get_str(binarym, 2, m);
-
-        char * binaryn = malloc(sizeof(pd.n));
-        //char * binaryP = mpz_get_str(binaryP, 2, p);
-        binaryn = mpz_get_str(binaryn, 2, pd.n);
-
-
-        //size_t mpz_sizeinbase (const mpz t op, int base)
-        ssize_t size = mpz_sizeinbase(m, 2);
-        //printf("size of m = %d\n", size);
-
-        mpz_realloc2(n, (mp_bitcnt_t) size);
-
-        mp_bitcnt_t j = (mp_bitcnt_t) size-2;
-
-        */
-/*struct ECpoint * P = malloc(sizeof(struct ECpoint));
-        mpz_init(P->X);
-        mpz_init(P->Y);
-        mpz_init(P->Z);
-
-        mpz_set(P->X, Q->X);
-        mpz_set(P->Y, Q->Y);
-        mpz_set(P->Z, Q->Z);*//*
-
-
-        */
-/*mpz_set(res->X, Q->X);
-        mpz_set(res->Y, Q->Y);
-        mpz_set(res->Z, Q->Z);*//*
-
-
-        */
-/*void mpz_realloc2 (mpz t x, mp bitcnt t n) [Function]
-Change the space allocated for x to n bits. The value in x is preserved if it fits, or is set to
-0 if not*//*
-
-        struct ECpoint term1, result;
-        mpz_init(term1.X);
-        mpz_init(term1.Y);
-        mpz_init(term1.Z);
-
-
-        mpz_init(result.X);
-        mpz_init(result.Y);
-        mpz_init(result.Z);
-
-        //sleep(2);
-
-        while(j >= 1 && (d->flag == 0))
-        {
-
-            //printf("doubling P\n");
-            //res = doubleec(res, EC, pd, d, res);
-
-            doubleec2(Q, EC, pd, d, &result);
-            //checkIfCurve(result, EC, pd);
-
-            //sleep(1);
-
-            */
-/*gmp_printf("resresresresQx %Zd\n", result.X);
-            gmp_printf("resresresresy %Zd\n\n", result.Y);*//*
-
-
-
-            if(mpz_cmp_ui(result.X, 0) == 0)
-            {
-                if(mpz_cmp_ui(result.Y, 1) == 0)
-                {
-                    if(mpz_cmp_ui(result.Z, 0) == 0)
-                    {
-                        //printf("point to infinity for EZn, bad luck check 1\n");
-                        //printf("ritorno 1\n");
-                        return result;
-                    }
-                }
-            }
-
-            int mj, nj;
-            mj = mpz_tstbit(m, j);
-            nj = mpz_tstbit(n, j);
-
-            //printf("%d, %d\n", mj, nj);
-
-            if((mj == 1) && (nj == 0))
-            {
-                mpz_set(term1.X, result.X);
-                mpz_set(term1.Y, result.Y);
-                mpz_set(term1.Z, result.Z);
-
-
-                //printf("Adding P and Q\n");
-                //res = add(res, Q, EC, pd, d, res);
-                add2(&term1, Q, EC, pd, d, &result);
-                //checkIfCurve(result, EC, pd);
-
-                //sleep(1);
-
-                //free(res);
-            }
-            if((mj == 0) && (nj == 1))
-            {
-                mpz_set(term1.X, result.X);
-                mpz_set(term1.Y, result.Y);
-                mpz_set(term1.Z, result.Z);
-
-
-                //printf("subtracting p and q\n");
-                //res = sub(res, Q, EC, pd, d, res);
-                sub2(&term1, Q, EC, pd, d, &result);
-                //checkIfCurve(result, EC, pd);
-
-                //sleep(1);
-                //free(res);
-            }
-
-
-            mpz_set(Q->X, result.X);
-            mpz_set(Q->Y, result.Y);
-            mpz_set(Q->Z, result.Z);
-
-
-            */
-/*gmp_printf("bbbbbbbQx %Zd\n", Q->X);
-            gmp_printf("bbbbbbbQy %Zd\n\n", Q->Y);*//*
-
-
-
-            if(mpz_cmp_ui(result.X, 0) == 0)
-            {
-                if(mpz_cmp_ui(result.Y, 1) == 0)
-                {
-                    if(mpz_cmp_ui(result.Z, 0) == 0)
-                    {
-                        printf("point to infinity for EZn, bad luck check 2\n");
-                        //printf("ritorno 2\n");
-                        return result;
-                    }
-                }
-            }
-
-            //bitwise operation
-            //int mpz_tstbit (const mpz t op, mp bitcnt t bit_index) [Function]
-            //Test bit bit index in op and return 0 or 1 accordingly.
-            //if(mj, nj) == (1, 0) P = add(P, Q)
-            //if(mj, nj) == (0, 1) p = sub(P, Q)
-            //if(mpz_tstbit())
-            j = j-1;
-        }
-        //printf("ritorno res\n");
-        return result;
-    }
-}
-*/
 
 struct ECpoint * add(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint *res)
 {
@@ -1011,7 +720,6 @@ void add2(struct ECpoint * P, struct ECpoint *Q, struct weirstrassEC EC, struct 
     //return (x3, y3)
 }
 
-
 struct ECpoint * sub(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res)
 {
     struct ECpoint Qnegate = negate(Q);
@@ -1026,7 +734,6 @@ void sub2(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct p
     return add2(P, &Qnegate, EC, pd, d, res);
 
 }
-
 
 struct ECpoint * doubleec(struct ECpoint * P, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD *d, struct ECpoint *res)
 {
@@ -1102,6 +809,7 @@ int checkIfCurve(struct ECpoint P, struct weirstrassEC EC, struct problemData pd
     else
     {
         printf("failed\n");
+        sleep(4);
         mpz_clear(tot);
 
         //gmp_printf("Y^2 = %Zd\n", squarey);
