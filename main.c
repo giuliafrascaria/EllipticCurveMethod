@@ -10,8 +10,8 @@
 #include <math.h>
 #include <pthread.h>
 
-void precomputePhase2array(struct problemData pd, const unsigned long len, unsigned int table[len], struct JsElem *head);
-int classicalECM(struct problemData pd, mpz_t * factor, gmp_randstate_t state, int digits);
+void precomputePhase2array(struct problemData pd, const unsigned long len, unsigned int table[len], struct JsElem *head, unsigned long primelen, int primetable[primelen][len]);
+int classicalECM(struct problemData pd, mpz_t * factor, gmp_randstate_t state, struct phase2structs s);
 int traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, mpz_t  *factor, struct ECpoint * returnQ);
 int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd);
 void getBBest(int logp, mpz_t * B);
@@ -21,7 +21,7 @@ void optimizedRandomEC(struct weirstrassEC * EC, struct ECpoint * Q, struct prob
 //void stageOne(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd);
 void randomECtraditional(struct weirstrassEC * EC, struct ECpoint  *Q, struct problemData pd, gmp_randstate_t state);
 int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd);
-int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, const unsigned long len, unsigned int  table[len], struct JsElem *head);
+int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, struct phase2structs s);
 
 
 
@@ -83,12 +83,21 @@ int main(int argc, char ** argv)
 
     struct phase2structs s;
 
-    precomputePhase2array(pd, tableLen, GCDtable, &head);       //returns GCDtable and the linked list of indexes
+
+    double dMmin = floor((mpz_get_d(pd.stageOneB) + pd.Dint/2) / pd.Dint);
+    double dMmax = ceil((mpz_get_d(pd.stageTwoB) - pd.Dint/2) / pd.Dint);
+    unsigned long primeLen = (unsigned long) (dMmax - dMmin);
+    int primeTable[primeLen][tableLen];
+
+
+    precomputePhase2array(pd, tableLen, GCDtable, &head, primeLen, primeTable);       //returns GCDtable and the linked list of indexes
 
 
     s.head = head;
     s.tableLen = tableLen;
     s.GCDtable = GCDtable;
+    s.primelen = primeLen;
+    s.primetable = primeTable;
 
 
     pthread_t t[7];
@@ -106,6 +115,8 @@ void * loop(void * k)
 {
 
     //printf("new thread with mtx %d\n", cont);
+    struct phase2structs * s = malloc(sizeof(struct phase2structs));
+    s = (struct phase2structs *) k;
 
     pthread_t tid = pthread_self();
     //initialize random state
@@ -124,12 +135,12 @@ void * loop(void * k)
 
 
     //while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0 && primeLog < maxlog) || pid == 0)
-    while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0))
-    {
+    /*while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0))
+    {*/
 
         for(i = 0; i < (pd.iterations)/8; i++)       //repeat w^w times
         {
-            success = classicalECM(pd, &factor, state, primeLog);
+            success = classicalECM(pd, &factor, state, *s);
             if(success == 1)
             {
                 exit(EXIT_SUCCESS);
@@ -137,7 +148,7 @@ void * loop(void * k)
             //printf("%ld\n", i);
         }
 
-    }
+  //  }
     printf("found no factor\n");
 
 
@@ -161,7 +172,7 @@ void getBBest(int logp, mpz_t * B)
 
 }
 
-int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state,  int digits)
+int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state,  struct phase2structs s)
 {
 
 
@@ -221,7 +232,7 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state,  i
         //find new curve
 
         printf("bad EC, restarting\n");
-        classicalECM(pd, factor, state,  digits);
+        classicalECM(pd, factor, state,  s);
     }
     else if (mpz_cmp_ui(g, 1) > 0)
     {
@@ -252,8 +263,8 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state,  i
             printf("starting step 2\n");
             //sleep(1);
 
-            success = efficientStageTwo(EC, result, pd);
-            //success = efficientStageTwoCut(EC, result, pd, )
+            //success = efficientStageTwo(EC, result, pd);
+            success = efficientStageTwoCut(EC, result, pd, s);
             if(success)
             {
                 printf("successful stage two\n");
@@ -1161,7 +1172,7 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     }
 }
 
-int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, const unsigned long len, unsigned int  table[len], struct JsElem *head)
+int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, struct phase2structs s)
 {
 
     /*gmp_printf("Qx = %Zd\n", Q.X);
@@ -1236,7 +1247,7 @@ int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct proble
 //    unsigned long primeLen = mpz_get_ui(primeTableLen);
     unsigned long primeLen = (unsigned long) (dMmax - dMmin);
 //    int primaTable[primeLen + 1][arraylen + 1];
-    int primaTable[primeLen][len];
+    int primaTable[primeLen][s.tableLen];
 
     //printf("primelen1 = %ld\nprimelen2 = %ld\n",  primeLen + 1, arraylen);
 
@@ -1244,7 +1255,7 @@ int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct proble
 //    printf("%lf\n", dD);
     for(unsigned long k = 0; k < primeLen; k++)     //wrong index
     {
-        for(unsigned long j = 1; j < len; j++)
+        for(unsigned long j = 1; j < s.tableLen; j++)
         {
 
             operations = (unsigned int) ((dMmin + k) * dD + j);
@@ -1298,7 +1309,7 @@ int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct proble
     mpz_init(two);
     mpz_set_ui(two, 2);
 
-    struct ECpoint points[len];    //DHalf
+    struct ECpoint points[s.tableLen];    //DHalf
     struct nonInvertibleD d;
     mpz_init(d.d);
     d.flag = 0;
@@ -1312,18 +1323,18 @@ int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct proble
 //    gmp_printf("resz = %Zd\n", res.Z);
 
 
-    for(unsigned long k = 1; k < len; k++)  //arraylen = DHalf
+    for(unsigned long k = 1; k < s.tableLen; k++)  //arraylen = DHalf
     {
         mpz_init(points[k].X);
         mpz_init(points[k].Y);
         mpz_init(points[k].Z);
     }
 
-    for(unsigned long k = 1; k < len; k = k+2)  //arraylen = DHalf
+    for(unsigned long k = 1; k < s.tableLen; k = k+2)  //arraylen = DHalf
     {
 
 //        if(mpz_cmp_ui(GCDtable[k], 1) == 0)
-        if(table[k] == 1)
+        if((s.GCDtable)[k] == 1)
         {
 //            gmp_printf("Px = %Zd\n", P.X);
 //            gmp_printf("Py = %Zd\n", P.Y);
@@ -1403,7 +1414,7 @@ int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct proble
 
     for(unsigned long k = 0; k <= primeLen; k++)     //m = k+Mmin
     {
-        listEl = head->next;
+        listEl = (s.head).next;
         mpz_add_ui(mIndex, Mmin, k);
 
         while(listEl != NULL)
@@ -1477,7 +1488,7 @@ int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct proble
     mpz_clear(partial2);
     mpz_clear(partial3);
 
-    for(unsigned long k = 1; k < len; k++)  //arraylen = DHalf
+    for(unsigned long k = 1; k < s.tableLen; k++)  //arraylen = DHalf
     {
         mpz_clear(points[k].X);
         mpz_clear(points[k].Y);
@@ -1507,7 +1518,7 @@ int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct proble
 }
 
 
-void precomputePhase2array(struct problemData pd, const unsigned long len, unsigned int  table[len], struct JsElem *head)
+void precomputePhase2array(struct problemData pd, const unsigned long len, unsigned int table[len], struct JsElem *head, unsigned long primelen, int primetable[primelen][len])
 {
     printf("precomputation for stage two\n");
 
@@ -1563,7 +1574,7 @@ void precomputePhase2array(struct problemData pd, const unsigned long len, unsig
 //    unsigned long arraylen = mpz_get_ui(Dhalf);
 
 //    mpz_t GCDtable[arraylen + 1];
-    unsigned int GCDtable[len];
+    //unsigned int GCDtable[len];
 
     for(unsigned long i = 1; i < len; i++) //chissà se irene è inclusa
     {
@@ -1573,7 +1584,7 @@ void precomputePhase2array(struct problemData pd, const unsigned long len, unsig
         if(mpz_cmp_ui(gcdVal, 1) == 0)
         {
 //            mpz_set_ui(GCDtable[i], 1);
-            GCDtable[i] = 1;
+            //GCDtable[i] = 1;
             table[i] = 1;
             //add i to the set Is
             struct JsElem *cell  = malloc(sizeof(struct JsElem));
@@ -1585,13 +1596,67 @@ void precomputePhase2array(struct problemData pd, const unsigned long len, unsig
         }
         else
         {
-            GCDtable[i] = 0;
+            //GCDtable[i] = 0;
             table[i] = 0;
         }
 
     }
 
 
+    mpz_t m, mD, primeCandidate;
+    unsigned int operations;
+//    mpz_init(primeTableLen);
+    mpz_init(m);
+    mpz_init(mD);
+    mpz_init(primeCandidate);
+
+//    mpz_sub(primeTableLen, Mmax, Mmin);
+//    unsigned long primeLen = mpz_get_ui(primeTableLen);
+    unsigned long primeLen = (unsigned long) (dMmax - dMmin);
+//    int primaTable[primeLen + 1][arraylen + 1];
+    int primaTable[primeLen][len];
+
+    //printf("primelen1 = %ld\nprimelen2 = %ld\n",  primeLen + 1, arraylen);
+
+    int check;
+//    printf("%lf\n", dD);
+    for(unsigned long k = 0; k < primeLen; k++)     //wrong index
+    {
+        for(unsigned long j = 1; j < len; j++)
+        {
+
+            operations = (unsigned int) ((dMmin + k) * dD + j);
+            mpz_set_ui(primeCandidate, operations);
+            // m = Mmin+k
+//            mpz_add_ui(m, Mmin, k);
+//            mpz_mul(mD, m, D);
+//
+//            mpz_add_ui(primeCandidate, mD, j);
+            primaTable[k][j] = 0;
+            if(mpz_probab_prime_p(primeCandidate, 20) == 2)     //the number is prime
+            {
+                //printf("casella con j %lu a 1 \t", j);
+                primaTable[k][j] = 1;
+            }
+            else
+            {
+                check = (int) ((dMmin + k) * dD - j);
+                if(check > 0)
+                {
+                    operations = (unsigned int) check;
+                    mpz_set_ui(primeCandidate, operations);
+//                mpz_sub_ui(primeCandidate, mD, j);
+                    if (mpz_probab_prime_p(primeCandidate, 20) == 2) {
+                        //printf("casella con j %lu a 1 \t", j);
+                        primaTable[k][j] = 1;
+                    }
+                } else
+                    operations=0;
+            }
+//            printf("|%d %u", primaTable[k][j], operations);
+        }
+//        printf("\n");
+    }
 
 }
 

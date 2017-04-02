@@ -62,6 +62,8 @@ struct phase2structs
     unsigned long tableLen;
     unsigned int * GCDtable;
     struct JsElem head;
+    unsigned long primelen;
+    int ** primetable;
 };
 
 void addh();
