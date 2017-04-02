@@ -57,6 +57,13 @@ struct JsElem
     struct JsElem * next;
 };
 
+struct phase2structs
+{
+    unsigned long tableLen;
+    unsigned int * GCDtable;
+    struct JsElem head;
+};
+
 void addh();
 void doubleh();
 struct ECpoint * add(struct ECpoint *P, struct ECpoint *Q, struct weirstrassEC EC, struct problemData pd, struct nonInvertibleD * d, struct ECpoint * res);
