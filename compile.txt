@@ -69,6 +69,9 @@ todo
 *risolvere la fase 2
 *magari ritornare alla scelta efficiente della curva con ordine divisibile per 16
 
+issues
+*B troppo grande manda in segmentation fault a inizio fase 2 -> oltre i 40000
+
 
 
 

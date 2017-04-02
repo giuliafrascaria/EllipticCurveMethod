@@ -23,6 +23,8 @@ struct problemData
     mpz_t stageOneB;        //must be even
     mpz_t stageTwoB;        //100B1
     mpz_t D;                //total memory
+    unsigned long Dint;
+    long iterations;
 };
 
 struct ellipticCurve

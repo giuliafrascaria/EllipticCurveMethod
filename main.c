@@ -10,6 +10,7 @@
 #include <math.h>
 #include <pthread.h>
 
+unsigned int * precomputePhase2array(struct problemData pd, const unsigned long len);
 int classicalECM(struct problemData pd, mpz_t * factor, gmp_randstate_t state, int k, int digits);
 int traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, mpz_t  *factor, struct ECpoint * returnQ);
 int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd);
@@ -24,15 +25,13 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
 
 
 struct problemData pd;
-int maxdigits = 9;
-pthread_mutex_t stage2mtx[8];
 
 
 int main(int argc, char ** argv)
 {
 
 
-    if(argc != 3)
+    if(argc != 4)
     {
         perror("missing numbers");
         return EXIT_FAILURE;
@@ -51,23 +50,15 @@ int main(int argc, char ** argv)
         return EXIT_FAILURE;
     }
 
-    mpz_t f1, f2;
-    mpz_init(f1);
-    mpz_init(f2);
-    //mpz_nextprime(f1, )
-    //choose criteria
-        //init
-
-    for(int j = 0; j < 8; j++)
-    {
-        pthread_mutex_init(&stage2mtx[j], NULL);
-    }
 
     mpz_init(pd.stageOneB);
     mpz_init(pd.stageTwoB);
     mpz_init(pd.D);
         //assign values
     //mpz_set_ui(pd.stageOneB, 100);
+
+    mpz_set_ui(pd.D, 30);
+    pd.Dint = 30;
 
 
     if(mpz_set_str(pd.stageOneB, (const char *) argv[2], 10) != 0)
@@ -76,38 +67,22 @@ int main(int argc, char ** argv)
         return EXIT_FAILURE;
     }
 
-    /*if(mpz_set_str(pd.stageTwoB, (const char *) argv[3], 10) != 0)
-    {
-        perror("invalid input type");
-        return EXIT_FAILURE;
-    }*/
 
     mpz_mul_ui(pd.stageTwoB, pd.stageOneB, 100);
 
+    pd.iterations = atol(argv[3]);
+    printf("iterating for %ld times\n", pd.iterations);
 
-   // mpz_sqrt(pd.stageTwoB, pd.n);
-   // gmp_printf("square root of n = %Zd\n", pd.stageTwoB);
+    //unsigned long tableLen = (pd.Dint)/2 + 1;
 
-
-    //get BBEst
-
-    /*int maxlog = primeLog+10;
-
-    pid_t pid;
-    pid = fork();
-
-    if(pid == 0)
-    {
-        primeLog = primeLog + 10;
-        maxlog = maxlog + 10;
-    }
-*/
+    //unsigned int *GCDtable;
+    //GCDtable = precomputePhase2array(pd, tableLen);
 
     pthread_t t[7];
     for(int k = 0; k < 7; k++)
     {
 
-        int c =k;
+        int c = k;
         pthread_create(&t[k], NULL, loop, (void *) &c);
         usleep(100);
     }
@@ -135,28 +110,14 @@ void * loop(void * k)
     mpz_init(factor);
     int success = 0;
     int primeLog = 9;   //starting to find primes with 3 digits (this is natural log)
-    double ww, w;
     long i;
-    long iterations;
+
 
     //while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0 && primeLog < maxlog) || pid == 0)
     while((mpz_cmp(pd.stageOneB, pd.stageTwoB) < 0))
     {
-        //getBBest(primeLog, &pd.stageOneB);        //alpertron
-      //  mpz_set_ui(pd.stageOneB, 100);
 
-
-        w = primeLog/log(mpz_get_ui(pd.stageOneB));
-
-
-        ww = pow(w, w);
-        //iterations = lround(ww);
-        iterations = 50;
-        printf("process iterating for %ld times\n", iterations);
-
-
-        //gmp_printf("BBest = %Zd\n\n", pd.stageOneB);
-        for(i = 0; i < iterations/8; i++)       //repeat w^w times
+        for(i = 0; i < (pd.iterations)/8; i++)       //repeat w^w times
         {
             success = classicalECM(pd, &factor, state, cont, primeLog);
             if(success == 1)
@@ -166,13 +127,6 @@ void * loop(void * k)
             //printf("%ld\n", i);
         }
 
-        primeLog+=3;
-        //get new BBest
-
-        printf("failure, incrementing B\n\n");
-        //exit(EXIT_FAILURE);
-        mpz_mul_ui(pd.stageOneB, pd.stageOneB, 10);
-        //sleep(1);
     }
     printf("found no factor\n");
 
@@ -285,34 +239,17 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
         }
         else if(success == 0)
         {
-            printf("TRYING stage 2\n");
+            printf("starting step 2\n");
             //sleep(1);
 
-            //if(digits > maxdigits)
-            //{
+            success = efficientStageTwo(EC, result, pd);
+            if(success)
+            {
+                printf("successful stage two\n");
+            }
 
-                if(pthread_mutex_trylock(&(stage2mtx[k])) == 0)
-                //if(pthread_mutex_lock(&(stage2mtx[0])) == 0)
-                {
-                    printf("sono qui\n");
-                    //printf("thread %ld locked %d mtxfor %d digits \n", pthread_self(), k, digits);
+            return success;
 
-                    maxdigits = digits;
-                    //success = stageTwo(EC, result, pd);
-                    success = efficientStageTwo(EC, result, pd);
-                    if(success)
-                    {
-                        printf("successful stage two\n");
-                    }
-                    //printf("thread %ld in stage two for %d digits\n", pthread_self(),digits/3);
-                    //sleep(3);
-                    pthread_mutex_unlock(&(stage2mtx[k]));
-                    //pthread_mutex_unlock(&(stage2mtx[0]));
-                    //printf("thread %ld leaving stage two for ln = %d\n", pthread_self(),digits);
-                    return success;
-                }
-            //}
-            //return 0;
 
         }
         else
@@ -355,116 +292,6 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state, in
 
     return success;
 }
-
-/*void invertionlessECM(struct problemData pd)
-{
-    //choose random EC
-    //declaration and init
-    struct ECpoint startP;
-    struct ellipticCurve EC;
-    mpz_init(startP.X);
-    mpz_init(startP.Z);
-    mpz_init(EC.sigma);
-    mpz_init(EC.C);
-    mpz_init(EC.u);
-    mpz_init(EC.v);
-    //generation
-    randomEC(EC, startP, pd);
-    //stage one
-    stageOne(EC, startP, pd);
-    //stage two
-}
-
-void optimizedRandomEC(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd)
-{
-    //random sigma, derive u v anc C from this
-
-    //initialize random state
-    gmp_randstate_t state;
-    gmp_randinit_mt(state);
-
-    //generate random sigma in [6, n-1]
-    unsigned long int six = 6;
-    mpz_t maxsigma;
-    mpz_sub_ui(maxsigma, pd.n, six);
-    mpz_urandomm(EC.sigma, state, maxsigma);
-    mpz_add_ui(EC.sigma, EC.sigma, six);
-
-    //the curve is determined by these values
-
-    //u
-    mpz_t squaresigma, nomodval;
-    mpz_init(squaresigma);
-    mpz_init(nomodval);
-    mpz_pow_ui(squaresigma, EC.sigma, 2);
-    unsigned long int five = 5;
-    mpz_sub_ui(nomodval, squaresigma, five);
-    mpz_mod(EC.u, nomodval, pd.n);
-
-    //v
-    mpz_t foursigma;
-    mpz_init(foursigma);
-    unsigned long int four = 4;
-    mpz_mul_ui(foursigma, EC.sigma, four);
-    mpz_mod(EC.v, foursigma, pd.n);
-
-    //C
-
-
-    //coordinates for initial point Q (Montgomery representation)
-    mpz_powm_ui(Q.X, EC.u, 3, pd.n);
-    mpz_powm_ui(Q.Z, EC.u, 3, pd.n);
-}
-
-void stageOne(struct ellipticCurve EC, struct ECpoint Q, struct problemData pd)
-{
-    //for cycle between all primes <= B1
-    //      pi(B) is the number of primes less than B
-
-    //funzioni utili
-    //void mpz_nextprime (mpz t rop, const mpz t op)
-    //void mpz_gcd (mpz t rop, const mpz t op1, const mpz t op2)
-
-    mpz_t primen;
-    mpz_init(primen);
-    mpz_set_str(primen, "1", 10);
-
-    *//*
-     * int mpz_cmp_ui (const mpz t op1, unsigned long int op2) [Macro]
-Compare op1 and op2. Return a positive value if op1 > op2, zero if op1 = op2, or a negative
-value if op1 < op2.
-     * *//*
-
-    while(mpz_cmp(primen, pd.stageOneB) <= 0)
-    {
-        //perform operations
-        //find largest integer a such that pi^a <= B1
-        unsigned long exp = 1;
-        int flag = 1;
-        mpz_t power;
-        mpz_init(power);
-        while(flag)
-        {
-            mpz_pow_ui(power, primen, exp);
-            if(mpz_cmp(power, pd.stageOneB) <= 0)
-            {
-                exp += 1;
-                //looking for a bigger exponent
-            }
-            else
-            {
-                flag = 0;
-                //Q = [pi^a]Q
-                struct ECpoint nQ = ECmultiplyMontgomery(Q, power);
-            }
-        }
-
-        //find next prime
-        mpz_nextprime(primen, primen);
-
-    }
-    //gcd
-}*/
 
 int traditionalStageOne(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, mpz_t * factor, struct ECpoint * returnQ)
 {
@@ -965,7 +792,9 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
     mpz_init(t2);
 
     mpz_mul_ui(B2, pd.stageOneB, 100);
-    mpz_sqrt(D, B2);
+    //mpz_sqrt(D, B2);
+
+    mpz_set(D, pd.D);
 
     if(mpz_odd_p(D) != 0)
     {
@@ -1308,15 +1137,178 @@ int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemDa
             //return q
             return 1;
         }
-        printf("\n\n\noibo che coincidenza q è proprio n\n\n\n");
+        //printf("\n\n\noibo che coincidenza q è proprio n\n\n\n");
         //fail
         return 0;
 
     }
     else
     {
-        printf("failed\n");
+        printf("failed stage 2\n");
         //fail
         return 0;
     }
 }
+
+
+unsigned int * precomputePhase2array(struct problemData pd, const unsigned long len)
+{
+    printf("precomputation for stage two\n");
+
+    struct JsElem head;
+
+    head.next = NULL;
+
+    mpz_t B2, D, Mmin, Mmax, Dhalf, t1,t2;
+    double dD, dMmin, dMmax, dDhalf;
+
+    mpz_init(B2);
+    mpz_init(D);
+    mpz_init(Mmax);
+    mpz_init(Mmin);
+    mpz_init(Dhalf);
+    mpz_init(t1);
+    mpz_init(t2);
+
+    mpz_mul_ui(B2, pd.stageOneB, 100);
+    mpz_set(D, pd.D);
+
+    if(mpz_odd_p(D) != 0)
+    {
+//        printf("ho un D dispari\n");
+        mpz_add_ui(D, D, 1);
+    }
+
+    dD = mpz_get_d(D);
+    dDhalf = mpz_get_d(D) / 2;
+
+    dMmin = floor((mpz_get_d(pd.stageOneB) + dDhalf) / dD);
+
+    //MMIN ← (B1 +D/2)/D, MMAX ← (B2 −D/2)/D  il primo parte intera inferiore, il secondo parte superiore
+//    mpz_div_ui(Dhalf, D, 2);
+//    mpz_add(t1, pd.stageOneB, Dhalf);
+//    mpz_div(Mmin, t1, D);
+//    printf("Mmin = %lf\n", dMmin);
+
+    dMmax = ceil((mpz_get_d(pd.stageTwoB) - dDhalf) / dD);
+//
+//
+//    mpz_sub(t2, B2, Dhalf);
+//    mpz_div(Mmax, t2, D);
+//    printf("Mmax = %lf\n", dMmax);
+
+
+    mpz_t gcdVal;
+    mpz_init(gcdVal);
+
+    mpz_clear(t1);
+    mpz_clear(t2);
+
+
+//    unsigned long arraylen = mpz_get_ui(Dhalf);
+
+//    mpz_t GCDtable[arraylen + 1];
+    unsigned int GCDtable[len];
+
+    for(unsigned long i = 1; i <= len; i++) //chissà se irene è inclusa
+    {
+//        mpz_init(GCDtable[i]);
+        mpz_gcd_ui(gcdVal, D, i);
+
+        if(mpz_cmp_ui(gcdVal, 1) == 0)
+        {
+//            mpz_set_ui(GCDtable[i], 1);
+            GCDtable[i] = 1;
+            //add i to the set Is
+            struct JsElem *cell  = malloc(sizeof(struct JsElem));
+            cell->index = i;
+            cell->next = head.next;
+            //el = &cell;
+            head.next = cell;
+            //printf("aggiungo elemento %lu a lista\n", cell->index);
+        }
+        else
+            GCDtable[i] = 0;
+//        printf("| %d ", GCDtable[i]);
+    }
+//    printf("\n");
+
+//    struct JsElem * in = head.next;
+//    while(in != NULL)
+//    {
+//        printf("found el %ld in list\n", in->index);
+//        in = in->next;
+//        sleep(1);
+//
+//    }
+
+    return GCDtable;
+
+
+
+}
+
+/*
+int * precomputePhase2matrix(struct problemData pd)
+{
+
+
+//    mpz_t primeTableLen, m, mD, primeCandidate;
+    mpz_t m, mD, primeCandidate;
+    unsigned int operations;
+//    mpz_init(primeTableLen);
+    mpz_init(m);
+    mpz_init(mD);
+    mpz_init(primeCandidate);
+
+//    mpz_sub(primeTableLen, Mmax, Mmin);
+//    unsigned long primeLen = mpz_get_ui(primeTableLen);
+    unsigned long primeLen = (unsigned long) (dMmax - dMmin);
+//    int primaTable[primeLen + 1][arraylen + 1];
+    static int primaTable[primeLen][arraylen + 1];
+
+    //printf("primelen1 = %ld\nprimelen2 = %ld\n",  primeLen + 1, arraylen);
+
+    int check;
+//    printf("%lf\n", dD);
+    for(unsigned long k = 0; k < primeLen; k++)     //wrong index
+    {
+        for(unsigned long j = 1; j <= arraylen; j++)
+        {
+
+            operations = (unsigned int) ((dMmin + k) * dD + j);
+            mpz_set_ui(primeCandidate, operations);
+            // m = Mmin+k
+//            mpz_add_ui(m, Mmin, k);
+//            mpz_mul(mD, m, D);
+//
+//            mpz_add_ui(primeCandidate, mD, j);
+            primaTable[k][j] = 0;
+            if(mpz_probab_prime_p(primeCandidate, 20) == 2)     //the number is prime
+            {
+                //printf("casella con j %lu a 1 \t", j);
+                primaTable[k][j] = 1;
+            }
+            else
+            {
+                check = (int) ((dMmin + k) * dD - j);
+                if(check > 0)
+                {
+                    operations = (unsigned int) check;
+                    mpz_set_ui(primeCandidate, operations);
+//                mpz_sub_ui(primeCandidate, mD, j);
+                    if (mpz_probab_prime_p(primeCandidate, 20) == 2) {
+                        //printf("casella con j %lu a 1 \t", j);
+                        primaTable[k][j] = 1;
+                    }
+                } else
+                    operations=0;
+            }
+//            printf("|%d %u", primaTable[k][j], operations);
+        }
+//        printf("\n");
+    }
+
+    return primaTable;
+}
+*/
