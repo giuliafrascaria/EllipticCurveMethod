@@ -23,6 +23,7 @@ void optimizedRandomEC(struct weirstrassEC * EC, struct ECpoint * Q, struct prob
 void randomECtraditional(struct weirstrassEC * EC, struct ECpoint  *Q, struct problemData pd, gmp_randstate_t state);
 int efficientStageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd);
 int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, struct phase2structs s);
+int efficientStageTwoCut2(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, struct phase2structs s);
 
 
 
@@ -96,6 +97,7 @@ int main(int argc, char ** argv)
     precomputePhase2(pd, tableLen, GCDtable, &head, primeLen, primeTable);       //returns GCDtable and the linked list of indexes
 
 
+    printf("sono in segfault?\n");
     s.head = head;
     s.tableLen = tableLen;
     s.GCDtable = GCDtable;
@@ -267,7 +269,8 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state,  s
             //sleep(1);
 
             //success = efficientStageTwo(EC, result, pd);
-            success = efficientStageTwoCut(EC, result, pd, s);
+            //success = efficientStageTwoCut(EC, result, pd, s);
+            success = efficientStageTwoCut2(EC, result, pd, s);
             if(success)
             {
                 printf("successful stage two\n");
@@ -1520,6 +1523,350 @@ int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct proble
     }
 }
 
+int efficientStageTwoCut2(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, struct phase2structs s)
+{
+
+    /*gmp_printf("Qx = %Zd\n", Q.X);
+    gmp_printf("Qy = %Zd\n", Q.Y);
+    gmp_printf("Qz = %Zd\n", Q.Z);*/
+
+
+    //printf("precomputation for stage two\n");
+
+
+
+    mpz_t B2, D, Mmin, Mmax, Dhalf, t1,t2;
+    double dD, dMmin, dMmax, dDhalf;
+
+    mpz_init(B2);
+    mpz_init(D);
+    mpz_init(Mmax);
+    mpz_init(Mmin);
+    mpz_init(Dhalf);
+    mpz_init(t1);
+    mpz_init(t2);
+
+    mpz_mul_ui(B2, pd.stageOneB, 100);
+    //mpz_sqrt(D, B2);
+
+    mpz_set(D, pd.D);
+
+    if(mpz_odd_p(D) != 0)
+    {
+//        printf("ho un D dispari\n");
+        mpz_add_ui(D, D, 1);
+    }
+
+    dD = mpz_get_d(D);
+    dDhalf = mpz_get_d(D) / 2;
+
+    dMmin = floor((mpz_get_d(pd.stageOneB) + dDhalf) / dD);
+
+    //MMIN ← (B1 +D/2)/D, MMAX ← (B2 −D/2)/D  il primo parte intera inferiore, il secondo parte superiore
+//    mpz_div_ui(Dhalf, D, 2);
+//    mpz_add(t1, pd.stageOneB, Dhalf);
+//    mpz_div(Mmin, t1, D);
+
+//    printf("Mmin = %lf\n", dMmin);
+
+    dMmax = ceil((mpz_get_d(pd.stageTwoB) - dDhalf) / dD);
+//
+//
+//    mpz_sub(t2, B2, Dhalf);
+//    mpz_div(Mmax, t2, D);
+
+//    printf("Mmax = %lf\n", dMmax);
+
+
+    mpz_t gcdVal;
+    mpz_init(gcdVal);
+
+    mpz_clear(t1);
+    mpz_clear(t2);
+
+
+/*
+//    mpz_t primeTableLen, m, mD, primeCandidate;
+    mpz_t m, mD, primeCandidate;
+    unsigned int operations;
+//    mpz_init(primeTableLen);
+    mpz_init(m);
+    mpz_init(mD);
+    mpz_init(primeCandidate);
+
+//    mpz_sub(primeTableLen, Mmax, Mmin);
+//    unsigned long primeLen = mpz_get_ui(primeTableLen);
+    unsigned long primeLen = (unsigned long) (dMmax - dMmin);
+//    int primaTable[primeLen + 1][arraylen + 1];
+    int primaTable[primeLen][s.tableLen];
+
+    //printf("primelen1 = %ld\nprimelen2 = %ld\n",  primeLen + 1, arraylen);
+
+    int check;
+//    printf("%lf\n", dD);
+    for(unsigned long k = 0; k < primeLen; k++)     //wrong index
+    {
+        for(unsigned long j = 1; j < s.tableLen; j++)
+        {
+
+            operations = (unsigned int) ((dMmin + k) * dD + j);
+            mpz_set_ui(primeCandidate, operations);
+            // m = Mmin+k
+//            mpz_add_ui(m, Mmin, k);
+//            mpz_mul(mD, m, D);
+//
+//            mpz_add_ui(primeCandidate, mD, j);
+            primaTable[k][j] = 0;
+            if(mpz_probab_prime_p(primeCandidate, 20) == 2)     //the number is prime
+            {
+                //printf("casella con j %lu a 1 \t", j);
+                primaTable[k][j] = 1;
+            }
+            else
+            {
+                check = (int) ((dMmin + k) * dD - j);
+                if(check > 0)
+                {
+                    operations = (unsigned int) check;
+                    mpz_set_ui(primeCandidate, operations);
+//                mpz_sub_ui(primeCandidate, mD, j);
+                    if (mpz_probab_prime_p(primeCandidate, 20) == 2) {
+                        //printf("casella con j %lu a 1 \t", j);
+                        primaTable[k][j] = 1;
+                    }
+                } else
+                    operations=0;
+            }
+//            printf("|%d %u", primaTable[k][j], operations);
+        }
+//        printf("\n");
+    }*/
+
+    //Q = Q0
+    struct ECpoint P, res;
+    mpz_init(P.X);
+    mpz_init(P.Z);
+    mpz_init(P.Y);
+
+    mpz_init(res.X);
+    mpz_init(res.Y);
+    mpz_init(res.Z);
+
+    mpz_set(P.X, Q.X);
+    mpz_set(P.Y, Q.Y);
+    mpz_set(P.Z, Q.Z);
+
+    mpz_t two;
+    mpz_init(two);
+    mpz_set_ui(two, 2);
+
+    struct ECpoint points[s.tableLen];    //DHalf
+    struct nonInvertibleD d;
+    mpz_init(d.d);
+    d.flag = 0;
+
+    res = ECmultiplyTraditional(&P, two, EC, pd, &d, &res);
+
+    checkIfCurve(res, EC, pd);
+
+//    gmp_printf("resx = %Zd\n", res.X);      //non trovo più a zero
+//    gmp_printf("resy = %Zd\n", res.Y);
+//    gmp_printf("resz = %Zd\n", res.Z);
+
+
+    for(unsigned long k = 1; k < s.tableLen; k++)  //arraylen = DHalf
+    {
+        mpz_init(points[k].X);
+        mpz_init(points[k].Y);
+        mpz_init(points[k].Z);
+    }
+
+    for(unsigned long k = 1; k < s.tableLen; k = k+2)  //arraylen = DHalf
+    {
+
+//        if(mpz_cmp_ui(GCDtable[k], 1) == 0)
+        if((s.GCDtable)[k] == 1)
+        {
+//            gmp_printf("Px = %Zd\n", P.X);
+//            gmp_printf("Py = %Zd\n", P.Y);
+//            gmp_printf("Pz = %Zd\n", P.Z);          //no more: always storing the same!!!! BUG
+
+            mpz_set(points[k].X, P.X);
+            mpz_set(points[k].Y, P.Y);
+            mpz_set(points[k].Z, P.Z);
+/*
+            gmp_printf("Pointsx = %Zd\n", points[k].X);
+            gmp_printf("Pointsy = %Zd\n", points[k].Y);
+            gmp_printf("Pointsz = %Zd\n", points[k].Z);*/
+        }
+        //Q = 2*Q0 + Q
+
+
+        add2(&res, &P, EC, pd, &d, &P);
+
+        checkIfCurve(P, EC, pd);
+//        sleep(1);
+    }
+
+    //--------------------------MAIN COMPUTATION-----------------------------------
+    //printf("main computation for stage two\n");
+
+    //d ← 1, P ← DQ0, R ← MminQ
+    mpz_t den, q, mIndex, partial1, partial2, partial3;
+    mpz_init(den);
+    mpz_init(q);
+    mpz_init(mIndex);
+    mpz_init(partial1);
+    mpz_init(partial2);
+    mpz_init(partial3);
+
+    mpz_set_ui(den, 1);
+
+    struct ECpoint S, R, jQ0, result;
+    mpz_init(S.X);
+    mpz_init(S.Y);
+    mpz_init(S.Z);
+
+    mpz_init(R.X);
+    mpz_init(R.Y);
+    mpz_init(R.Z);
+
+    mpz_init(jQ0.X);
+    mpz_init(jQ0.Y);
+    mpz_init(jQ0.Z);
+
+    mpz_init(result.X);
+    mpz_init(result.Y);
+    mpz_init(result.Z);
+
+
+    //printf("qui\n\n");
+
+    //S = DQ0
+    //gmp_printf("moltiplico Q0 per D = %Zd\n", D);
+    S = ECmultiplyTraditional2(&Q, &D, EC, pd, &d, &S);
+    //printf("calcolato S\n");
+    //R = Mmin*S
+    mpz_set_d(Mmin, dMmin);
+    //gmp_printf("moltiplico S per Mmin = %Zd\n", Mmin);
+    R = ECmultiplyTraditional2(&S, &Mmin, EC, pd, &d, &R);
+    //printf("calcolato R\n");
+
+//    checkIfCurve(S, EC, pd);
+//    checkIfCurve(R, EC, pd);
+    //struct JsElem * el;
+
+    volatile struct JsElem * listEl;
+
+    //printf("primelen1 = %ld\nprimelen2 = %ld\n",  primeLen + 1, arraylen);
+
+    mpz_set_ui(Mmin, (unsigned long) dMmin);
+    mpz_set_ui(Mmax, (unsigned long) dMmax);
+
+    for(unsigned long k = 0; k < s.primelen; k++)     //m = k+Mmin
+    {
+        listEl = (s.head).next;
+        mpz_add_ui(mIndex, Mmin, k);
+
+        while(listEl != NULL)
+        {
+            //printf("index k = %ld\nindex i = %ld\nlen1 = %ld\nlen2 = %ld\n", k, listEl->index, primeLen + 1, arraylen);
+            if((s.primetable)[k][listEl->index] == 1)
+            {
+                //printf("quiccc\n\n");
+                mpz_set(jQ0.X, (points[(listEl->index)]).X);
+                mpz_set(jQ0.Y, (points[(listEl->index)]).Y);
+                mpz_set(jQ0.Z, (points[(listEl->index)]).Z);
+
+                /*printf("retrieving %ld\n", listEl->index);
+                gmp_printf("Pointsx = %Zd\n", (points[(listEl->index)]).X);
+                gmp_printf("Pointsy = %Zd\n", (points[(listEl->index)]).Y);
+                gmp_printf("Pointsz = %Zd\n", (points[(listEl->index)]).Z);
+
+                sleep(2);*/
+
+                //printf("naaaazapegna\n\n");
+
+                //den ← den · (x.R*z.jQ0 − x.jQ0*z.R)
+                mpz_mul(partial1, R.X, jQ0.Z);
+                mpz_mul(partial2, jQ0.X, R.Z);
+                mpz_sub(partial3, partial1, partial2);
+
+                mpz_mul(den, den, partial3);
+
+                //gmp_printf("ecco un den = %Zd\n", den);
+                //sleep(1);
+            }
+            //sleep(1);
+            //printf("time to cambiare il listEl!\n\n");
+            listEl = listEl->next;
+
+        }
+//        printf("sasfasd\n");
+        //sleep(1);
+        //add2(&R, &P, EC, pd, &d, &result);
+        result = add3(&R, &P, EC, pd, &d);
+
+        checkIfCurve(result, EC, pd);
+
+        mpz_set(R.X, result.X);
+        mpz_set(R.Y, result.Y);
+        mpz_set(R.Z, result.Z);
+//        printf("naaaazapegna\n\n");
+        //while(scorro lista collegata di Js)
+        //if(primetable[m][js] == 1)
+        //faccio cose
+        //R = R + Q
+    }
+
+
+    //mpz_mod(den, den, pd.n);
+
+
+    mpz_gcd(q, den, pd.n);
+
+    //gmp_printf("ecco a voi d = %Zd\n", den);
+    //gmp_printf("ecco a voi q = %Zd\n", q);
+    //sleep(1);
+
+    mpz_clear(R.X);
+    mpz_clear(R.Y);
+    mpz_clear(R.Z);
+    mpz_clear(P.X);
+    mpz_clear(P.Y);
+    mpz_clear(P.Z);
+    mpz_clear(partial1);
+    mpz_clear(partial2);
+    mpz_clear(partial3);
+
+    for(unsigned long k = 1; k < s.tableLen; k++)  //arraylen = DHalf
+    {
+        mpz_clear(points[k].X);
+        mpz_clear(points[k].Y);
+        mpz_clear(points[k].Z);
+    }
+
+    if(mpz_cmp_ui(q, 1) > 0)
+    {
+        if(mpz_cmp(q, pd.n) < 0)
+        {
+            printf("--------------------------------------------------------------------\n\n");
+            gmp_printf("\tfound factor %Zd\n\n------------------------------------------------------------------\n", q);
+            //return q
+            return 1;
+        }
+        //printf("\n\n\noibo che coincidenza q è proprio n\n\n\n");
+        //fail
+        return 0;
+
+    }
+    else
+    {
+        //printf("failed stage 2\n");
+        //fail
+        return 0;
+    }
+}
 
 void precomputePhase2array(struct problemData pd, const unsigned long len, unsigned int table[len], struct JsElem *head, unsigned long primelen, int primetable[primelen][len])
 {
