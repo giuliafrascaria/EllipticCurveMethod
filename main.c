@@ -269,7 +269,7 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state,  s
     else
     {
         //prime power multipliers
-        //printf("starting step 1\n");
+        printf("starting step 1\n");
         //sleep(2);
         struct ECpoint result;
         mpz_init(result.X);
@@ -285,7 +285,7 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state,  s
         }
         else if(success == 0)
         {
-            //printf("starting step 2\n");
+            printf("starting step 2\n");
             //sleep(1);
 
             //success = efficientStageTwo(EC, result, pd);
@@ -311,17 +311,7 @@ int classicalECM(struct problemData pd, mpz_t *factor, gmp_randstate_t state,  s
             //sleep(1);
             return 2;
         }
-        /*else
-        {
-            printf("should try stage 2\n");
-            //sleep(1);
-            success = stageTwo(EC, result, pd);
-            if(success)
-            {
-                printf("successful stage two\n");
-            }
-            return success;
-        }*/
+
 
         mpz_clear(result.X);
         mpz_clear(result.Y);
@@ -518,7 +508,7 @@ value if op1 < op2.
 
 }
 
-int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
+/*int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
 {
     //succede se per nessun fattore primo p di n la curva E( ZZp) ha ordine B-smooth.
     // si dovrebbero individuare fattori primi p di n per cui l’ordine della stessa
@@ -590,7 +580,7 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
     mpz_nextprime(nextq, pd.stageOneB);
     mpz_nextprime(q, pd.stageOneB);
 
-    //*previousCalc = ECmultiplyTraditional(previousCalc, q, EC, pd, &d, previousCalc);
+    /*//*previousCalc = ECmultiplyTraditional(previousCalc, q, EC, pd, &d, previousCalc);
     //sostituire con una cosa tipo
     res = ECmultiplyTraditional(previousCalc, q, EC, pd, &d, &res);
 
@@ -641,11 +631,11 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
             mpz_set(res.Y, previousCalc->Y);
             mpz_set(res.Z, previousCalc->Z);
 
-            /*mpz_nextprime(q, q);
+            *//*mpz_nextprime(q, q);
 
             mpz_set(Qi.X, Q.X);
             mpz_set(Qi.Y, Q.Y);
-            mpz_set(Qi.Z, Q.Z);*/
+            mpz_set(Qi.Z, Q.Z);*//*
 
             //gmp_printf("\n\ntrying prime %Zd\n\n", nextq);
         }
@@ -663,7 +653,7 @@ int stageTwo(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd)
 
     return 0;   //failure
 
-}
+}*/
 
 void randomECtraditional(struct weirstrassEC * EC, struct ECpoint * Q, struct problemData pd, gmp_randstate_t state)
 {
@@ -1612,64 +1602,6 @@ int efficientStageTwoCut2(struct weirstrassEC EC, struct ECpoint Q, struct probl
     mpz_clear(t1);
     mpz_clear(t2);
 
-    //printf("segfault2?\n");
-
-/*
-//    mpz_t primeTableLen, m, mD, primeCandidate;
-    mpz_t m, mD, primeCandidate;
-    unsigned int operations;
-//    mpz_init(primeTableLen);
-    mpz_init(m);
-    mpz_init(mD);
-    mpz_init(primeCandidate);
-
-//    mpz_sub(primeTableLen, Mmax, Mmin);
-//    unsigned long primeLen = mpz_get_ui(primeTableLen);
-    unsigned long primeLen = (unsigned long) (dMmax - dMmin);
-//    int primaTable[primeLen + 1][arraylen + 1];
-    int primaTable[primeLen][s.tableLen];
-
-    //printf("primelen1 = %ld\nprimelen2 = %ld\n",  primeLen + 1, arraylen);
-
-    int check;
-//    printf("%lf\n", dD);
-    for(unsigned long k = 0; k < primeLen; k++)     //wrong index
-    {
-        for(unsigned long j = 1; j < s.tableLen; j++)
-        {
-
-            operations = (unsigned int) ((dMmin + k) * dD + j);
-            mpz_set_ui(primeCandidate, operations);
-            // m = Mmin+k
-//            mpz_add_ui(m, Mmin, k);
-//            mpz_mul(mD, m, D);
-//
-//            mpz_add_ui(primeCandidate, mD, j);
-            primaTable[k][j] = 0;
-            if(mpz_probab_prime_p(primeCandidate, 20) == 2)     //the number is prime
-            {
-                //printf("casella con j %lu a 1 \t", j);
-                primaTable[k][j] = 1;
-            }
-            else
-            {
-                check = (int) ((dMmin + k) * dD - j);
-                if(check > 0)
-                {
-                    operations = (unsigned int) check;
-                    mpz_set_ui(primeCandidate, operations);
-//                mpz_sub_ui(primeCandidate, mD, j);
-                    if (mpz_probab_prime_p(primeCandidate, 20) == 2) {
-                        //printf("casella con j %lu a 1 \t", j);
-                        primaTable[k][j] = 1;
-                    }
-                } else
-                    operations=0;
-            }
-//            printf("|%d %u", primaTable[k][j], operations);
-        }
-//        printf("\n");
-    }*/
 
     //Q = Q0
     struct ECpoint P, res;
@@ -1896,6 +1828,11 @@ int efficientStageTwoCut2(struct weirstrassEC EC, struct ECpoint Q, struct probl
     mpz_clear(partial1);
     mpz_clear(partial2);
     mpz_clear(partial3);
+    mpz_clear(B2);
+    mpz_clear(D);
+    mpz_clear(Dhalf);
+    mpz_clear(Mmax);
+    mpz_clear(Mmin);
 
     //printf("segfault6?\n");
 
