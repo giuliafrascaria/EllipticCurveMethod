@@ -1160,7 +1160,7 @@ int checkIfCurve(struct ECpoint P, struct weirstrassEC EC, struct problemData pd
     else
     {
         printf("failed\n");
-        sleep(4);
+        //sleep(4);
         mpz_clear(tot);
 
         //gmp_printf("Y^2 = %Zd\n", squarey);
