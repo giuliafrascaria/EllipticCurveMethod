@@ -30,7 +30,7 @@
 
 sudo gcc -o ECM dataStructures.h ECarithmetics.c classicalEC.c main.c -lgmp
 
-sudo gcc -Wall -Wextra -O3 -o ECM dataStructures.h ECarithmetics.c  main.c -lgmp -lm
+sudo gcc -Wall -Wextra -O3 -pthread -o ecm dataStructures.h ECarithmetics.c  main.c -lgmp -lm
 
 cc -I/root/EllipticCurveMethod/gc/include dataStructures.h ECarithmetics.c  main.c /root/EllipticCurveMethod/gc/lib/libgc.a -o -lgmp -lm ECM
 

@@ -48,7 +48,9 @@ int main(int argc, char ** argv)
 
     mpz_init(pd.n);
         //conversion
-    printf("%s\n", argv[1]);
+    /*int res;
+    res = execve("ecmfactor", argv, NULL);
+    printf("%s\n", argv[1]);*/
     if(mpz_set_str(pd.n, (const char *) argv[1], 10) != 0)
     {
         perror("invalid input type");
@@ -62,7 +64,7 @@ int main(int argc, char ** argv)
         //assign values
     //mpz_set_ui(pd.stageOneB, 100);
 
-    mpz_set_ui(pd.D, 210);
+    mpz_set_ui(pd.D, 30);
     pd.Dint = 30;
 
 
@@ -1541,15 +1543,6 @@ int efficientStageTwoCut(struct weirstrassEC EC, struct ECpoint Q, struct proble
 int efficientStageTwoCut2(struct weirstrassEC EC, struct ECpoint Q, struct problemData pd, struct phase2structs s)
 {
 
-    /*gmp_printf("Qx = %Zd\n", Q.X);
-    gmp_printf("Qy = %Zd\n", Q.Y);
-    gmp_printf("Qz = %Zd\n", Q.Z);*/
-
-
-    //printf("precomputation for stage two mo revè\n");
-
-
-
     mpz_t B2, D, Mmin, Mmax, Dhalf, t1,t2;
     double dD, dMmin, dMmax, dDhalf;
 
@@ -1596,8 +1589,8 @@ int efficientStageTwoCut2(struct weirstrassEC EC, struct ECpoint Q, struct probl
 //    printf("Mmax = %lf\n", dMmax);
 
 
-    mpz_t gcdVal;
-    mpz_init(gcdVal);
+    /*mpz_t gcdVal;
+    mpz_init(gcdVal);*/
 
     mpz_clear(t1);
     mpz_clear(t2);
@@ -1629,6 +1622,8 @@ int efficientStageTwoCut2(struct weirstrassEC EC, struct ECpoint Q, struct probl
     res = ECmultiplyTraditional(&P, two, EC, pd, &d, &res);
 
     checkIfCurve(res, EC, pd);
+
+    mpz_clear(two);
 
 //    gmp_printf("resx = %Zd\n", res.X);      //non trovo più a zero
 //    gmp_printf("resy = %Zd\n", res.Y);
@@ -1668,9 +1663,15 @@ int efficientStageTwoCut2(struct weirstrassEC EC, struct ECpoint Q, struct probl
         add2(&res, &P, EC, pd, &d, &P);
 
         checkIfCurve(P, EC, pd);
+
+
 //        sleep(1);
     }
     //printf("segfault4?\n");
+
+    mpz_clear(res.X);
+    mpz_clear(res.Z);
+    mpz_clear(res.Y);
 
 
     //--------------------------MAIN COMPUTATION-----------------------------------
@@ -1825,6 +1826,15 @@ int efficientStageTwoCut2(struct weirstrassEC EC, struct ECpoint Q, struct probl
     mpz_clear(P.X);
     mpz_clear(P.Y);
     mpz_clear(P.Z);
+    mpz_clear(S.X);
+    mpz_clear(S.Y);
+    mpz_clear(S.Z);
+    mpz_clear(jQ0.Z);
+    mpz_clear(jQ0.X);
+    mpz_clear(jQ0.Y);
+    mpz_clear(result.Y);
+    mpz_clear(result.Z);
+    mpz_clear(result.X);
     mpz_clear(partial1);
     mpz_clear(partial2);
     mpz_clear(partial3);
@@ -1833,6 +1843,8 @@ int efficientStageTwoCut2(struct weirstrassEC EC, struct ECpoint Q, struct probl
     mpz_clear(Dhalf);
     mpz_clear(Mmax);
     mpz_clear(Mmin);
+    mpz_clear(mIndex);
+    mpz_clear(den);
 
     //printf("segfault6?\n");
 
@@ -1855,6 +1867,7 @@ int efficientStageTwoCut2(struct weirstrassEC EC, struct ECpoint Q, struct probl
         }
         //printf("\n\n\noibo che coincidenza q è proprio n\n\n\n");
         //fail
+        mpz_clear(q);
         return 0;
 
     }
@@ -1862,6 +1875,7 @@ int efficientStageTwoCut2(struct weirstrassEC EC, struct ECpoint Q, struct probl
     {
         //printf("failed stage 2\n");
         //fail
+        mpz_clear(q);
         return 0;
     }
 }
